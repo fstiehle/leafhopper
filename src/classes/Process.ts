@@ -1,4 +1,4 @@
-import IProcess from "src/interfaces/IProcess";
+import IProcess from "../interfaces/IProcess";
 import Step from "./Step";
 
 export default class Process implements IProcess {

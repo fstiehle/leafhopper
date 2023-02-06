@@ -1,6 +1,7 @@
-// TODO: import Signable from "./Signable";
+import ISignable from "../interfaces/ISignable";
 
 export interface StepPublicProperties {
+  index: number;
   from: number;
   caseID: number;
   taskID: number;
@@ -8,8 +9,9 @@ export interface StepPublicProperties {
   signature?: string[];
 }
 
-/* Step encodes all the information necessary for a transition, it is the main data type. */
-export default class Step implements StepPublicProperties {
+/* Step encodes all the information necessary for a transition. */
+export default class Step implements StepPublicProperties, ISignable {
+  index: number;
   from: number;
   caseID: number;
   taskID: number;
@@ -27,11 +29,26 @@ export default class Step implements StepPublicProperties {
   }
 
   constructor(props: StepPublicProperties) {
+    this.index = props.index;
     this.from = props.from;
     this.caseID = props.caseID;
     this.taskID = props.taskID;
     this.signature = props.signature ? props.signature : new Array<string>(5).fill("0x");
     this.newTokenState = props.newTokenState;
     this.uintNewTokenState = Step.getUintTokenState(props.newTokenState);
+  }
+
+  getSignable(withSignature?: boolean): { types: string[]; value: any[]; } {
+    // eslint-disable-next-line
+    const payload: any[] = [this.index, this.caseID, this.from, this.taskID, this.uintNewTokenState];
+    const types = ['uint', 'uint', 'uint', 'uint', 'uint'];
+    if (withSignature) { 
+      payload.push(this.signature);
+      types.push('bytes[]');
+    }
+    return {
+      types: types,
+      value: payload
+    }
   }
 }
