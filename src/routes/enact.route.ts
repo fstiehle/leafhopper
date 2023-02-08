@@ -4,11 +4,11 @@
 import express, { Router } from 'express';
 import IRequestServer from '../interfaces/IRequestServer';
 import enactController from '../controllers/enact.controller';
-import IProcess from '../interfaces/IProcess';
-import IEnforcement from '../interfaces/IEnforcement';
+import IWallet from '../interfaces/IWallet';
+import ICase from '../interfaces/ICase';
 
-const enactRoute = (process: IProcess, enforcement: IEnforcement, requestServer: IRequestServer): Router => {
-  return express.Router().post('/:id([0-9]+)', enactController(process, enforcement, requestServer));
+const enactRoute = (process: ICase, wallet: IWallet, requestServer: IRequestServer): Router => {
+  return express.Router().get('/:id([0-9]+)', enactController(process, wallet, requestServer));
 }
 
 export default enactRoute;

@@ -1,33 +1,61 @@
-import Step from "../classes/Step";
-import IEnforcement from "../interfaces/IEnforcement";
 import IWallet from "../interfaces/IWallet";
-import _enact from '../generated/Enact';
+import _enact from '../config/generated/Enact';
+import ICase from "../interfaces/ICase";
+import ProposeMessage from "../classes/ProposeMessage";
+import ConfirmMessage from "../classes/ConfirmMessage";
 
-export default class Enforcement implements IEnforcement {
+export default class Enforcement {
 
-  private wallet: IWallet;
-
-  constructor(wallet: IWallet) {
-    this.wallet = wallet;
+  static enact(tokenState: number[], taskID: number, participantID: number) {
+    return _enact(tokenState, taskID, participantID);
   }
 
-  address(step: Step, sig: string): string {
-    return this.wallet.address(step, sig);
-  }
+  static check(process: ICase, wallet: IWallet, proposal: ProposeMessage) {
+    if (proposal.step == null) {
+      return false;
+    }
+    const step = proposal.step;
+    if (step.caseID !== process.caseID) {
+      return false;
+    }
 
-  signature(step: Step) {
-    return this.wallet.signature(step);
-  }
+    // conforming task and participant? 
+    const proposedTokenState = Enforcement.enact(
+      [...process.tokenState], 
+      step.taskID,
+      step.from
+    );
+    if (JSON.stringify(proposedTokenState) === JSON.stringify(process.tokenState) 
+    || JSON.stringify(step.newTokenState) !== JSON.stringify(proposedTokenState)
+    ) {
+      return false; 
+    }
 
-  enact(tokenState: number[], taskID: number) {
-    return _enact(tokenState, taskID);
-  }
+    // check integrity, i.e., check signature
+    const expectedAddress = process.participants.get(step.from)!.pubKey;
+    if (wallet.verify(proposal, proposal.signature) !== expectedAddress) {
+      console.info(`Proposal ${step.taskID} did not pass integrity checks`);
+      return false;
+    }
 
-  check(step: Step) {
     return true;
   }
 
-  isFinalised(step: Step) {
+  static checkConfirmed(process: ICase, wallet: IWallet, confirmation: ConfirmMessage) {
+    if (confirmation.step == null) {
+      return false;
+    }
+    if (confirmation.signature.length !== process.participants.size) {
+      console.info(`Confirmation for task ${confirmation.step.taskID} not signed by all participants: ${JSON.stringify(confirmation.signature)}`);
+      return false;
+    }
+    confirmation.signature.forEach((sig, par) => {
+      if (wallet.verify(confirmation, sig) !== process.participants.get(par)!.pubKey) {
+        console.info(`Signature of participant: ${par} not matching`);
+        return false;
+      }
+    });
+
     return true;
   }
 

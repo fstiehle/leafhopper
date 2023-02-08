@@ -4,29 +4,32 @@ import chai from 'chai';
 import Step from '../src/classes/Step';
 import {ethers} from 'ethers';
 import Wallet from '../src/classes/Wallet';
+import ProposeMessage from '../src/classes/ProposeMessage';
 const {expect} = chai;
 
 describe('Test crypto functions', () => {
 
   it('test signing and verifying', async () => {
-    const wallet = new Wallet(ethers.Wallet.createRandom());
+    const wallet = new Wallet(0, ethers.Wallet.createRandom());
 
-    const step = new Step({
+    const msg = new ProposeMessage();
+    msg.step = new Step({
       index: 0,
       from: 0,
       caseID: 0,
       taskID: 0,
       newTokenState: []
     })
-    let signature = await wallet.signature(step);
-    expect(wallet.address(step, step.signature[step.from]), "verify signature...").to.eql(wallet.address);
 
-    step.taskID = 1;
-    expect(wallet.address(step, step.signature[step.from]), "verify signature...").to.not.eql(wallet.address);
+    let signature = await wallet.produceSignature(msg);
+    expect(wallet.verify(msg, signature), "verify signature...").to.equal(wallet.address);
 
-    const eve = new Wallet(ethers.Wallet.createRandom());
-    signature = await eve.signature(step);
-    expect(wallet.address(step, step.signature[step.from]), "verify signature...").to.not.eql(wallet.address);
+    msg.step.taskID = 1;
+    expect(wallet.verify(msg, signature), "verify signature...").to.not.equal(wallet.address);
+
+    const eve = new Wallet(0, ethers.Wallet.createRandom());
+    signature = await eve.produceSignature(msg);
+    expect(wallet.verify(msg, signature), "verify signature...").to.not.equal(wallet.address);
   });
 
 });

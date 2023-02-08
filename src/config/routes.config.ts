@@ -2,20 +2,20 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import proposeRoute from '../routes/propose.route';
 import IRequestServer from '../interfaces/IRequestServer';
 import enactRoute from '../routes/enact.route';
-import IProcess from '../interfaces/IProcess';
-import IEnforcement from '../interfaces/IEnforcement';
+import ICase from '../interfaces/ICase';
 import confirmRoute from '../routes/confirm.route';
+import IWallet from '../interfaces/IWallet';
 
 const routes = (
   app: Express, 
-  process: IProcess, 
-  enforcement: IEnforcement, 
+  process: ICase, 
+  wallet: IWallet, 
   requestServer: IRequestServer) => {
 
   app.use(express.json());
-  app.use('/enact/', enactRoute(process, enforcement, requestServer));
-  app.use('/propose/', proposeRoute(process, enforcement));
-  app.use('/confirm/', confirmRoute(process, enforcement));
+  app.use('/enact/', enactRoute(process, wallet, requestServer));
+  app.use('/propose/', proposeRoute(process, wallet));
+  app.use('/confirm/', confirmRoute(process, wallet));
 
   app.get("/", (_, res, next) => {
     res.sendStatus(200);
@@ -24,7 +24,7 @@ const routes = (
 
   app.use((error: Error, _: Request, response: Response, next: NextFunction) => {
     const message = error.message || 'Something went wrong';
-    console.error(message);
+    console.error("[Server] will respond with error:", message);
     response
       .status(500)
       .send(message);

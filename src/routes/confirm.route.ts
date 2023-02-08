@@ -3,11 +3,11 @@
 // install as new state
 import express, { Router } from 'express';
 import confirmController from '../controllers/confirm.controller';
-import IEnforcement from '../interfaces/IEnforcement';
-import IProcess from '../interfaces/IProcess';
+import ICase from '../interfaces/ICase';
+import IWallet from '../interfaces/IWallet';
 
-const confirmRoute = (process: IProcess, enforcement: IEnforcement): Router => {
-  return express.Router().post('/:id([0-9]+)', confirmController(process, enforcement));
+const confirmRoute = (process: ICase, wallet: IWallet): Router => {
+  return express.Router().post('/:id([0-9]+)', confirmController(process, wallet));
 }
 
 export default confirmRoute;

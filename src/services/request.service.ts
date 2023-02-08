@@ -1,14 +1,14 @@
-import https from 'https';
+import http from 'http';
 
 const request = (
   options: {hostname: string, port: number},
   method: string, 
   path: string, 
   data: string): Promise<string> => {
-    
+
   console.log(`${method} request to ${options.hostname}:${options.port}${path}`);
   return new Promise((resolve, reject) => {
-    const req = https.request({...options/*TODO:, ca: process.env.ROOT_CA*/, path, method}, (res) => {
+    const req = http.request({...options/*TODO:, ca: process.env.ROOT_CA*/, path, method}, (res) => {
       res.setEncoding('utf8');
       let responseBody = '';
 

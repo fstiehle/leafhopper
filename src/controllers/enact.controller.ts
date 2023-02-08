@@ -1,10 +1,13 @@
-import { Request, Response, NextFunction, response } from 'express';
-import IEnforcement from '../interfaces/IEnforcement';
-import IProcess from '../interfaces/IProcess';
+import { Request, Response, NextFunction} from 'express';
 import IRequestServer from '../interfaces/IRequestServer';
-import Step, { StepPublicProperties } from '../classes/Step';
-import config from '../config/leafhopper.config'
-import participants from '../config/participants.config';
+import ICase from '../interfaces/ICase';
+import { Participant } from '../interfaces/IParticipants';
+import IWallet from '../interfaces/IWallet';
+import Enforcement from '../services/enforcement.service';
+import ProposeMessage from '../classes/ProposeMessage';
+import ConfirmMessage from '../classes/ConfirmMessage';
+import IMessage from '../interfaces/IMessage';
+import Step from '../classes/Step';
 
 /**
  * 
@@ -16,13 +19,13 @@ import participants from '../config/participants.config';
  */
 const broadcast = (
   requestServer: IRequestServer, 
-  step: Step, 
+  participants: Participant[],
+  message: IMessage, 
   method: string, 
   path: string) => {
 
   const broadcast = new Array<Promise<any>>();
-  for (const participant of participants.values()) {
-    if (participant.id === config.IDENTITY.ID) continue; // Exclude myself from broadcast
+  for (const participant of participants) {
     const options = {
       headers: {
         'Content-Type': 'application/json',
@@ -30,12 +33,12 @@ const broadcast = (
       hostname: participant.hostname,
       port: participant.port
     }
-    broadcast[participant.id] = requestServer(
+    broadcast.push(requestServer(
       options,
       method,
       path,
-      JSON.stringify({step}) 
-    );
+      JSON.stringify({message})
+    ));
   }
   return broadcast;
 }
@@ -47,59 +50,85 @@ const broadcast = (
  * @param requestServer 
  * @returns 
  */
-const enactController = (process: IProcess, enforcement: IEnforcement, requestServer: IRequestServer) => {
+const enactController = (
+  processCase: ICase, 
+  wallet: IWallet,
+  requestServer: IRequestServer) => {
+
   return async (req: Request, res: Response, next: NextFunction) => {
     // incoming message from local BPMS
     const taskID = parseInt(req.params.id);
-    console.log('enact', taskID);
+    console.log('enact task ID', taskID);
     // TODO: Check blockchain for possible dispute state
-    // Propose enactment to all other nodes, collect OKs (via /propose/)
-    const step = new Step({
-      index: process.steps.length,
-      from: config.IDENTITY.ID,
-      caseID: process.caseID,
+    // Propose enactment to all other nodes, collect OKs (via /propose/)  
+    const proposeMessage = new ProposeMessage();
+    proposeMessage.from = wallet.identity;
+    proposeMessage.step = new Step({
+      index: processCase.steps.length,
+      from: wallet.identity,
+      caseID: processCase.caseID,
       taskID: taskID,
-      newTokenState: enforcement.enact([...process.tokenState], taskID)
+      newTokenState: Enforcement.enact(
+        [...processCase.tokenState], taskID, wallet.identity)
     });
-
-    step.signature[config.IDENTITY.ID] = await enforcement.signature(step);
+    proposeMessage.signature = await wallet.produceSignature(proposeMessage);
 
     // Broadcast 
-    const proposeBroadcast = broadcast(requestServer, step, "GET", "/propose/"  + step.taskID);
-    
-    // Wait for ACKs of all participants
-    Promise.all(proposeBroadcast).then(results => {
-      results.forEach((result, participantID) => {
-        const receivedStep = new Step(JSON.parse(result) as unknown as StepPublicProperties);
-        if (!receivedStep) {
-          throw new Error(`Malformed JSON: ${JSON.stringify(req.body)} to ${JSON.stringify(receivedStep)}`);
+    const otherParticipants = [...processCase.participants.values()]
+    .filter(e => e.id !== wallet.identity);
+
+    // Wait and collect confirmations of all participants
+    Promise.all(broadcast(
+      requestServer, 
+      otherParticipants, 
+      proposeMessage, 
+      "POST", 
+      "/propose/" + proposeMessage.step.taskID
+    ))
+    .then(results => {
+
+      const confirmation = new ConfirmMessage();
+      confirmation.signature[wallet.identity] = proposeMessage.signature;
+      confirmation.step = proposeMessage.step;
+
+      results.forEach((result) => {
+        const receivedAnswer  = new ProposeMessage();
+        try {
+          receivedAnswer.copyFromJSON(JSON.parse(result).message);
+        } catch (err) {
+          return next(new Error(`Malformed JSON: ${JSON.stringify(result)}`));
         }
 
-        if (JSON.stringify(step.getSignable()) !== JSON.stringify(receivedStep.getSignable())) {
-          throw new Error(`Propose answer from ${participantID}: different step`);
+        if (!receivedAnswer.step || !receivedAnswer.from || !receivedAnswer.signature) {
+          return next(new Error(`Malformed JSON: ${JSON.stringify(result)}`));
         }
-
-        if (step.signature[config.IDENTITY.ID] !== receivedStep.signature[config.IDENTITY.ID]) {
-          throw new Error(`Propose answer from ${participantID}: swapped signature`);
-        }
-
-        if (enforcement.address(receivedStep, receivedStep.signature[participantID])
-          !== participants.get(participantID)!.pubKey
-        ) {
-          throw new Error(`Propose answer from ${participantID}: signature verification failed.`);
-        }
-
-        step.signature[participantID] = receivedStep.signature[participantID];
-        console.log('Propose confirmed by', participantID);
+        confirmation.signature[receivedAnswer.from] = receivedAnswer.signature;
+        console.log('Proposal confirmed by', receivedAnswer.from);
       })
 
+      if (!Enforcement.checkConfirmed(processCase, wallet, confirmation)) {
+        return next(new Error(`Proposal for ${confirmation.step!.taskID} failed: confirmation(s) missing.`));
+      }
+
       // Send async all OKs to others (via /confirm/)
-      broadcast(requestServer, step, "POST", "/confirm/"  + step.taskID);
+      Promise.all(broadcast(
+        requestServer, 
+        otherParticipants, 
+        confirmation, 
+        "POST", 
+        "/confirm/" + confirmation.step!.taskID
+      ))
+      .catch(e => console.error(e))
+
       // responds to local BPMS with OK 
-      process.steps.push(step);
+      processCase.steps.push(confirmation.step!);
+      processCase.tokenState = confirmation.step!.newTokenState;
       res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify({step}));
+      res.status(200).send(JSON.stringify({message: confirmation}));
       return next();
+    })
+    .catch(error => {
+      return next(error);
     })
   }
 }
