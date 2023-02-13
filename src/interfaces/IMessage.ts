@@ -1,3 +1,3 @@
 export default interface IMessage {
-  copyFromJSON(obj: Object): IMessage;
+  copyFromJSON(obj: object): IMessage;
 }

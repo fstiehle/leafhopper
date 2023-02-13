@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
       "strict": true,
+      "module": "commonjs",
       "esModuleInterop": true,
       "target": "es6",
       "noImplicitAny": true,
@@ -20,6 +21,6 @@
     "files": [
       "src/app.ts"
     ],
-    "include": ["src/**/*", "tests/**/*"],
+    "include": ["src/**/*"],
     "exclude": ["node_modules"]
 }

@@ -4,7 +4,7 @@ import Step, { StepProperties } from "./Step";
 
 export default class ProposeMessage implements ISignable, IMessage {
   step: Step|null = null;
-  signature: string = "";
+  signature = "";
   from: number|null = null;
   to: number|null = null;
 
