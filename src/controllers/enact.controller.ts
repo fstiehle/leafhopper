@@ -118,7 +118,7 @@ const enactController = (
         "POST", 
         "/confirm/" + confirmation.step!.taskID
       ))
-      .catch(e => console.error(e))
+      .catch(e => console.error(e));
 
       // responds to local BPMS with OK 
       processCase.steps.push(confirmation.step!);

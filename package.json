@@ -7,7 +7,9 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "build": "eslint . --ext .ts && rimraf dist && tsc && ncp src/config/model dist/config/model",
-    "generate": "ts-node src/scripts/main.ts",
+    "chain": "ts-node src/scripts/chain.ts",
+    "generate": "ts-node src/scripts/generate.ts && tsc && waffle",
+    "deploy": "ts-node src/scripts/deploy.ts",
     "preserve": "npm run build",
     "pregenerate": "npm run build",
     "serve": "nodemon src/app.ts",
@@ -23,7 +25,12 @@
     "url": "https://github.com/fstiehle/leafhopper/issues"
   },
   "homepage": "https://github.com/fstiehle/leafhopper#readme",
+  "dependencies": {
+    "ethers": "^6.0.5",
+    "express": "^4.18.1"
+  },
   "devDependencies": {
+    "@openzeppelin/contracts": "^4.8.1",
     "@types/chai": "^4.3.1",
     "@types/express": "^4.17.13",
     "@types/mocha": "^9.1.1",
@@ -32,17 +39,16 @@
     "@typescript-eslint/parser": "^5.50.0",
     "chai": "^4.3.6",
     "chai-http": "^4.3.0",
+    "chorpiler": "^0.2.1",
     "eslint": "^8.18.0",
+    "ethereum-waffle": "^4.0.9",
+    "ganache": "^7.7.5",
     "mocha": "^10.0.0",
     "ncp": "^2.0.0",
     "nodemon": "^2.0.18",
     "rimraf": "^3.0.2",
+    "solc": "^0.8.18",
     "ts-node": "^10.8.1",
     "typescript": "^4.7.4"
-  },
-  "dependencies": {
-    "chorpiler": "^0.2.1",
-    "ethers": "^6.0.0",
-    "express": "^4.18.1"
   }
 }

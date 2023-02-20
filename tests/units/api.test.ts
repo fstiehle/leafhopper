@@ -4,11 +4,11 @@ import chai from 'chai';
 import chaiHttp from 'chai-http';
 import {ethers} from 'ethers';
 const {expect} = chai;
-import Enforcement from "../src/services/enforcement.service";
+import Enforcement from "../../src/services/enforcement.service";
 import { Server } from 'node:http';
-import { Participant } from '../src/interfaces/IParticipants';
-import { _Wallet } from '../src/interfaces/IWallet';
-import AppServer from '../src/classes/AppServer';
+import { Participant } from '../../src/interfaces/IParticipants';
+import { _Wallet } from '../../src/interfaces/IWallet';
+import AppServer from '../../src/classes/AppServer';
 
 Enforcement.enact = (tokenState: number[], taskID: number, participantID: number): number[] => {
   console.warn("Testing without conformance check.");
@@ -27,13 +27,13 @@ describe('Test api calls with dummy conformance check', () => {
 
   before(() => {
     for (let index = 0; index < NUMBER_OF_PARTICIPANTS; index++) {
-      const wallet = ethers.Wallet.createRandom();
+      const wallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey);
       participants.set(index, {id: index, name:'', hostname: 'localhost', port: 9000 + index, pubKey: wallet.address})
       wallets.set(index, wallet);
     }
 
     for (const participant of participants.values()) {
-      servers.set(participant.id, AppServer.listen(participant.port, participant.id, wallets.get(participant.id)!, participants))
+      servers.set(participant.id, AppServer.listen(participant.port, participant.id, wallets.get(participant.id)!, "", participants))
     }
   })
 

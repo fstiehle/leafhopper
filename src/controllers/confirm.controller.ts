@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import Step from '../classes/Step';
 import Enforcement from '../services/enforcement.service';
 import ICase from '../interfaces/ICase';
 import IWallet from '../interfaces/IWallet';

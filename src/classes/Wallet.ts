@@ -7,12 +7,12 @@ export default class Wallet implements IWallet {
   address: string;
   identity: number;
 
-  constructor(identity: number, _wallet: _Wallet) {
+  constructor(identity: number, _wallet: _Wallet, contractAddress: string) {
     this._wallet = _wallet;
     this.address = _wallet.address;
     this.identity = identity;
   }
-  
+
   produceSignature(toSign: ISignable): Promise<string> {
     const signablePart = toSign.getSignable();
     const encoder = new ethers.AbiCoder();
@@ -37,4 +37,4 @@ export default class Wallet implements IWallet {
       signature
     );
   }
-}
+} 

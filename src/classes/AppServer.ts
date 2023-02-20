@@ -11,13 +11,14 @@ export default class AppServer {
     port: number,
     identity: number,
     wallet: _Wallet,
+    contractAddress: string,
     participants: Participants
    ) {
     const app = express();
     routes(
       app,
       new Case(participants),
-      new Wallet(identity, wallet), // TODO: provider to communicate with blockchain
+      new Wallet(identity, wallet, contractAddress),
       request
     )
     console.log(`Participant ${identity} running on ${port} ⚡`);

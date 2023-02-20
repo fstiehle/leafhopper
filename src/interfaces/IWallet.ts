@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import ISignable from "./ISignable";
 
-export type _Wallet = ethers.HDNodeWallet;
+export type _Wallet = ethers.Wallet;
 
 export default interface IWallet {
   identity: number;
