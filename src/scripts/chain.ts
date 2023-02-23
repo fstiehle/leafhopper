@@ -1,14 +1,16 @@
 import { execSync } from "child_process";
 import testConfig from "../config/test.config";
 
-const execute = (line: string) => {
-  console.log(line);
-  try {
-    console.log(execSync(line, { stdio: 'inherit' }));
-  } catch(err) {
-    console.log(err);
-    return;
-  }
+let arg = "";
+const args = process.argv.slice(2);
+if (args.length > 0) {
+  arg = args[0];
 }
 
-execute(`npx ganache -m "${testConfig.mnemonic}"`);
+const line = `npx ganache -m "${testConfig.mnemonic}" ${arg}`;
+
+try {
+  console.log(execSync(line, { stdio: 'inherit' }));
+} catch(err) {
+  console.error(err);
+}

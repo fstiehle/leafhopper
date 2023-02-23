@@ -1,9 +1,9 @@
-import Step from "../classes/Step";
-import Participants from "./IParticipants";
+import Participants from "../classes/Participants";
+import IProof from "./IProof";
 
 export default interface ICase {
   caseID: number;
-  steps: Step[];
-  tokenState: Array<number>;
+  steps: IProof[];
+  tokenState: number;
   participants: Participants;
 }

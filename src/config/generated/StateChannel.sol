@@ -12,18 +12,17 @@ contract ProcessChannel {
     uint from;
     uint caseID;
     uint taskID;
-    bytes16 salt;
     uint newTokenState;
-    bytes[] signature;
+    bytes[] signatures;
   }
-  uint private tokenState = 1;
-  uint private index = 0;
+  uint public tokenState = 1;
+  uint public index = 0;
   // TODO: better performance with mapping?
-  address[3] private participants;
+  address[3] public participants;
 
   /// Timestamps for the challenge-response dispute window
-  uint private disputeMadeAtUNIX = 0;
-  uint private immutable disputeWindowInUNIX;
+  uint public disputeMadeAtUNIX = 0;
+  uint public immutable disputeWindowInUNIX;
 
   /**
    * @param _participants addresses for the roles 
@@ -71,11 +70,11 @@ contract ProcessChannel {
     } 
     // Verify signatures
     bytes32 payload = keccak256(
-      abi.encode(_step.caseID, _step.from, _step.taskID, _step.newTokenState, _step.salt)
+      abi.encode(_step.caseID, _step.from, _step.taskID, _step.newTokenState)
     );
     for (uint256 i = 0; i < participants.length; i++) {
-      if (_step.signature[i].length != 65) return false;
-      if (payload.toEthSignedMessageHash().recover(_step.signature[i]) != participants[uint(i)]) {
+      if (_step.signatures[i].length != 65) return false;
+      if (payload.toEthSignedMessageHash().recover(_step.signatures[i]) != participants[uint(i)]) {
         return false;
       }
     }

@@ -6,14 +6,16 @@
   "baseUrl": ".",
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "build": "eslint . --ext .ts && rimraf dist && tsc && ncp src/config/model dist/config/model",
+    "build": "eslint . --ext .ts && rimraf dist && tsc && waffle",
     "chain": "ts-node src/scripts/chain.ts",
-    "generate": "ts-node src/scripts/generate.ts && tsc && waffle",
+    "generate": "ts-node src/scripts/generate.ts",
     "deploy": "ts-node src/scripts/deploy.ts",
     "preserve": "npm run build",
-    "pregenerate": "npm run build",
+    "postgenerate": "rimraf dist && tsc && waffle",
     "serve": "nodemon src/app.ts",
-    "test": "mocha"
+    "test": "mocha",
+    "clean": "rimraf dist",
+    "case/0": "ts-node tests/cases/incident-management/scripts/case.ts"
   },
   "repository": {
     "type": "git",
@@ -39,7 +41,7 @@
     "@typescript-eslint/parser": "^5.50.0",
     "chai": "^4.3.6",
     "chai-http": "^4.3.0",
-    "chorpiler": "^0.2.1",
+    "chorpiler": "^0.3.2",
     "eslint": "^8.18.0",
     "ethereum-waffle": "^4.0.9",
     "ganache": "^7.7.5",

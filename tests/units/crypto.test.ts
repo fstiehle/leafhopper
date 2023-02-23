@@ -18,7 +18,7 @@ describe('Test crypto functions', () => {
       from: 0,
       caseID: 0,
       taskID: 0,
-      newTokenState: []
+      newTokenState: 0
     })
 
     let signature = await wallet.produceSignature(msg);

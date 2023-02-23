@@ -6,7 +6,7 @@ import ConfirmMessage from "../classes/ConfirmMessage";
 
 export default class Enforcement {
 
-  static enact(tokenState: number[], taskID: number, participantID: number) {
+  static enact(tokenState: number, taskID: number, participantID: number) {
     return _enact(tokenState, taskID, participantID);
   }
 
@@ -18,15 +18,19 @@ export default class Enforcement {
     if (step.caseID !== process.caseID) {
       return false;
     }
+    if (step.index > process.steps.length) {
+      console.info(`Step index too high`);
+      return false;
+    }
 
     // conforming task and participant? 
     const proposedTokenState = Enforcement.enact(
-      [...process.tokenState], 
+      process.tokenState, 
       step.taskID,
       step.from
     );
-    if (JSON.stringify(proposedTokenState) === JSON.stringify(process.tokenState) 
-    || JSON.stringify(step.newTokenState) !== JSON.stringify(proposedTokenState)
+    if (proposedTokenState === process.tokenState
+    || step.newTokenState !== proposedTokenState
     ) {
       return false; 
     }
@@ -45,12 +49,9 @@ export default class Enforcement {
     if (confirmation.step == null) {
       return false;
     }
-    if (confirmation.signature.length !== process.participants.size) {
-      console.info(`Confirmation for task ${confirmation.step.taskID} not signed by all participants: ${JSON.stringify(confirmation.signature)}`);
-      return false;
-    }
-    confirmation.signature.forEach((sig, par) => {
-      if (wallet.verify(confirmation, sig) !== process.participants.get(par)!.pubKey) {
+
+    process.participants.forEach((par, index) => {
+      if (wallet.verify(confirmation, confirmation.signatures[index]) !== par.pubKey) {
         console.info(`Signature of participant: ${par} not matching`);
         return false;
       }
@@ -58,5 +59,4 @@ export default class Enforcement {
 
     return true;
   }
-
 }

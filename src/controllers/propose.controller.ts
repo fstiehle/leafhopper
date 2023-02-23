@@ -10,15 +10,21 @@ const proposeController = (processCase: ICase, wallet: IWallet) => {
     const taskID = parseInt(req.params.id);
     console.log('received proposal for', taskID);
 
-    const proposal = new ProposeMessage ();
+    // Check blockchain for possible dispute state
+    if (await wallet.isDisputed()) {
+      return next(new Error(`Process Channel is disputed.`));
+    }
+
+    const proposal = new ProposeMessage();
     try {
       proposal.copyFromJSON(req.body.message);
     } catch (err) {
-      return next(new Error(`Malformed JSON: ${JSON.stringify(req.body)}`));
+      console.warn(err);
+      return next(new Error(`Malformed JSON: ${req.body} (1)`));
     }
 
-    if (!proposal.step || !proposal.signature) {
-      return next(new Error(`Malformed JSON: ${JSON.stringify(req.body)}`));
+    if (proposal.step == null || proposal.signature == null) {
+      return next(new Error(`Malformed JSON: ${req.body} (2)`));
     }
 
     if (proposal.step.taskID !== taskID) {
@@ -33,6 +39,8 @@ const proposeController = (processCase: ICase, wallet: IWallet) => {
     if (!Enforcement.check(processCase, wallet, proposal)) {
       return next(new Error(`Task ${taskID} failed verification`));
     }
+
+    console.log('proposal ok for', taskID);
     const answer = new ProposeMessage(); 
     answer.step = proposal.step;
     answer.from = wallet.identity;

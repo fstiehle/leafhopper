@@ -5,6 +5,7 @@ type Participant = {
   port: number;
   pubKey: string;
 }
+
 type Participants = Map<number, Participant>
 
 export default Participants;

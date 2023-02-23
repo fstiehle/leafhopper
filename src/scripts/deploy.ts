@@ -18,7 +18,16 @@ import fs from 'fs';
   const factory = ethers.ContractFactory.fromSolidity(metadata, wallet);
   const contract = await factory.deploy(keys, config.ROOT.disputeWindow);
   const address = await contract.getAddress();
-  console.log(`Deployment successful! Contract address: ${address}`);
+  console.log(`Deployment successful! Contract address:`);
+  console.log(`[${address}]`);
+
+  const tx = contract.deploymentTransaction();
+  if (tx == null) {
+    return console.error("Error getting deployment tx.");
+  } 
+
+  const receipt = await tx.wait(1);
+  console.log("Gas used:", receipt?.gasUsed.toString());
 
   const leafhopper = fs.readFileSync('./dist/config/leafhopper.config.js')
   .toString()
@@ -26,6 +35,6 @@ import fs from 'fs';
 
   fs.writeFile('./dist/config/leafhopper.config.js', leafhopper, { flag: 'w+' },
       (err) => { if (err) { console.error(err); } });
-      console.log("Contract address written to leafhopper.config.js");
+      console.log("Contract address written to dist/config/leafhopper.config.js");
 
 })();

@@ -1,14 +1,37 @@
 import http from 'http';
+import IRequestServer from '../interfaces/IRequestServer';
 
-const request = (
-  options: {hostname: string, port: number},
+const keepAliveAgent = (() => {
+  if (process.env.NODE_ENV !== 'production') {
+    return new http.Agent({
+      keepAlive: false
+    });
+  } else {
+    return new http.Agent({
+      keepAlive: true,
+      timeout: 24000
+    });
+  }
+})();
+
+const request: IRequestServer = (
+  _options: {hostname: string, port: number},
   method: string, 
   path: string, 
-  data: string): Promise<string> => {
+  data?: string): Promise<string> => {
 
-  console.log(`${method} request to ${options.hostname}:${options.port}${path}`);
+  console.log(`${method} request to ${_options.hostname}:${_options.port}${path}`);
   return new Promise((resolve, reject) => {
-    const req = http.request({...options/*TODO:, ca: process.env.ROOT_CA*/, path, method}, (res) => {
+
+    const options = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      agent: keepAliveAgent,
+      ..._options
+    }
+
+    const req = http.request({...options, path, method}, (res) => {
       res.setEncoding('utf8');
       let responseBody = '';
 
@@ -18,22 +41,26 @@ const request = (
 
       res.on('end', () => {
         if (res.statusCode !== 200) {
-          reject(new Error(`${res.statusCode} ${responseBody}`));
+          const error = new Error(responseBody);
+          error.name = res.statusCode ? res.statusCode.toString() : "unknown";
+          reject(error);
         } else {
-          try {
-            resolve(responseBody);
-          } catch (error: any) {
-            reject(new Error(error));
-          }
+          resolve(responseBody);
         }
       });
     });
 
     req.on('error', (err) => {
+      if (req.reusedSocket) {
+        console.log("Reused socket!")
+      }
       reject(err);
     });
 
-    req.write(data)
+    if (data != null) {
+      req.write(data);
+    }
+
     req.end();
   });
 }

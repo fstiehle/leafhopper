@@ -10,6 +10,10 @@ const confirmController = (processCase: ICase, wallet: IWallet) => {
     const taskID = parseInt(req.params.id);
     console.log('confirm request for', taskID);
 
+    if (await wallet.isDisputed()) {
+      return next(new Error(`Process Channel is disputed.`));
+    }
+
     const confirmation = new ConfirmMessage();
     try {
       confirmation.copyFromJSON(req.body.message);
@@ -17,7 +21,7 @@ const confirmController = (processCase: ICase, wallet: IWallet) => {
       return next(new Error(`Malformed JSON: ${JSON.stringify(req.body)}`));
     }
 
-    if (!confirmation.step || !confirmation.signature) {
+    if (confirmation.step == null || confirmation.signatures == null) {
       return next(new Error(`Malformed JSON: ${JSON.stringify(req.body)}`));
     }
 
@@ -29,7 +33,7 @@ const confirmController = (processCase: ICase, wallet: IWallet) => {
       return next(new Error(`Task ${taskID} failed confirmation`));
     }
     // install as new state
-    processCase.steps.push(confirmation.step);
+    processCase.steps.push(confirmation.getProof());
     processCase.tokenState = confirmation.step.newTokenState;
     res.sendStatus(200);
     return next();

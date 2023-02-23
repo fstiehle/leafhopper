@@ -1,47 +1,12 @@
 import { Request, Response, NextFunction} from 'express';
 import IRequestServer from '../interfaces/IRequestServer';
 import ICase from '../interfaces/ICase';
-import { Participant } from '../interfaces/IParticipants';
 import IWallet from '../interfaces/IWallet';
 import Enforcement from '../services/enforcement.service';
 import ProposeMessage from '../classes/ProposeMessage';
 import ConfirmMessage from '../classes/ConfirmMessage';
-import IMessage from '../interfaces/IMessage';
 import Step from '../classes/Step';
-
-/**
- * 
- * @param requestServer 
- * @param step 
- * @param method 
- * @param path 
- * @returns 
- */
-const broadcast = (
-  requestServer: IRequestServer, 
-  participants: Participant[],
-  message: IMessage, 
-  method: string, 
-  path: string) => {
-
-  const broadcast = new Array<Promise<any>>();
-  for (const participant of participants) {
-    const options = {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      hostname: participant.hostname,
-      port: participant.port
-    }
-    broadcast.push(requestServer(
-      options,
-      method,
-      path,
-      JSON.stringify({message})
-    ));
-  }
-  return broadcast;
-}
+import broadcast from '../services/broadcast.service';
 
 /**
  * 
@@ -59,7 +24,11 @@ const enactController = (
     // incoming message from local BPMS
     const taskID = parseInt(req.params.id);
     console.log('enact task ID', taskID);
-    // TODO: Check blockchain for possible dispute state
+    
+    // Check blockchain for possible dispute state
+    if (await wallet.isDisputed()) {
+      return next(new Error(`Process Channel is disputed.`));
+    }
     // Propose enactment to all other nodes, collect OKs (via /propose/)  
     const proposeMessage = new ProposeMessage();
     proposeMessage.from = wallet.identity;
@@ -69,7 +38,7 @@ const enactController = (
       caseID: processCase.caseID,
       taskID: taskID,
       newTokenState: Enforcement.enact(
-        [...processCase.tokenState], taskID, wallet.identity)
+        processCase.tokenState, taskID, wallet.identity)
     });
     proposeMessage.signature = await wallet.produceSignature(proposeMessage);
 
@@ -85,33 +54,35 @@ const enactController = (
       "POST", 
       "/propose/" + proposeMessage.step.taskID
     ))
-    .then(results => {
+    .then(async results => {
 
       const confirmation = new ConfirmMessage();
-      confirmation.signature[wallet.identity] = proposeMessage.signature;
+      confirmation.signatures[wallet.identity] = proposeMessage.signature;
       confirmation.step = proposeMessage.step;
 
       results.forEach((result) => {
-        const receivedAnswer  = new ProposeMessage();
+        const receivedAnswer = new ProposeMessage();
         try {
           receivedAnswer.copyFromJSON(JSON.parse(result).message);
         } catch (err) {
-          return next(new Error(`Malformed JSON: ${JSON.stringify(result)}`));
+          console.warn(err);
+          throw new Error(`Malformed JSON: ${result} (1)`);
         }
-
-        if (!receivedAnswer.step || !receivedAnswer.from || !receivedAnswer.signature) {
-          return next(new Error(`Malformed JSON: ${JSON.stringify(result)}`));
+        if (receivedAnswer.step == null || receivedAnswer.from == null || receivedAnswer.signature == null) {
+          throw new Error(`Malformed JSON: ${result} (2)`);
         }
-        confirmation.signature[receivedAnswer.from] = receivedAnswer.signature;
+        confirmation.signatures[receivedAnswer.from] = receivedAnswer.signature;
         console.log('Proposal confirmed by', receivedAnswer.from);
-      })
+      });
 
       if (!Enforcement.checkConfirmed(processCase, wallet, confirmation)) {
-        return next(new Error(`Proposal for ${confirmation.step!.taskID} failed: confirmation(s) missing.`));
+        throw new Error(`Proposal for ${confirmation.step!.taskID} failed: confirmation(s) missing.`);
       }
+      console.log("Checks passed for", confirmation.step!.taskID);
 
-      // Send async all OKs to others (via /confirm/)
-      Promise.all(broadcast(
+      // Send all OKs to others (via /confirm/)
+      // TODO: Could be done async
+      await Promise.all(broadcast(
         requestServer, 
         otherParticipants, 
         confirmation, 
@@ -121,7 +92,7 @@ const enactController = (
       .catch(e => console.error(e));
 
       // responds to local BPMS with OK 
-      processCase.steps.push(confirmation.step!);
+      processCase.steps.push(confirmation.getProof());
       processCase.tokenState = confirmation.step!.newTokenState;
       res.setHeader('Content-Type', 'application/json');
       res.status(200).send(JSON.stringify({message: confirmation}));
@@ -129,7 +100,8 @@ const enactController = (
     })
     .catch(error => {
       return next(error);
-    })
+    });
   }
 }
+
 export default enactController;

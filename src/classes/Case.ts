@@ -1,11 +1,11 @@
-import Participants from "../interfaces/IParticipants";
-import Step from "./Step";
+import Participants from "./Participants";
 import ICase from "../interfaces/ICase";
+import IProof from "../interfaces/IProof";
 
 export default class Case implements ICase {
   caseID = 0;
-  steps = new Array<Step>();
-  tokenState = new Array<number>()
+  steps = new Array<IProof>();
+  tokenState = 1;
   participants: Participants;
 
   constructor(participants: Participants) {

@@ -6,14 +6,13 @@ import {ethers} from 'ethers';
 const {expect} = chai;
 import Enforcement from "../../src/services/enforcement.service";
 import { Server } from 'node:http';
-import { Participant } from '../../src/interfaces/IParticipants';
+import { Participant } from '../../src/classes/Participants';
 import { _Wallet } from '../../src/interfaces/IWallet';
 import AppServer from '../../src/classes/AppServer';
 
-Enforcement.enact = (tokenState: number[], taskID: number, participantID: number): number[] => {
+Enforcement.enact = (tokenState: number, taskID: number, participantID: number): number => {
   console.warn("Testing without conformance check.");
-  tokenState.push(1);
-  return tokenState;
+  return tokenState + 1;
 }
 
 chai.use(chaiHttp);
@@ -27,7 +26,7 @@ describe('Test api calls with dummy conformance check', () => {
 
   before(() => {
     for (let index = 0; index < NUMBER_OF_PARTICIPANTS; index++) {
-      const wallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey);
+      const wallet = new ethers.Wallet(ethers.Wallet.createRandom().privateKey).connect(new ethers.JsonRpcProvider("http://127.0.0.1:8545"));
       participants.set(index, {id: index, name:'', hostname: 'localhost', port: 9000 + index, pubKey: wallet.address})
       wallets.set(index, wallet);
     }

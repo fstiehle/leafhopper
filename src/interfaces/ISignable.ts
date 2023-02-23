@@ -5,6 +5,5 @@ type ABIEncoding = {
 }
 
 export default interface ISignable {
-  signature: Array<string> | string;
   getSignable(): ABIEncoding;
 }

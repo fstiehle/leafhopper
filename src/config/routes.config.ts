@@ -5,6 +5,8 @@ import enactRoute from '../routes/enact.route';
 import ICase from '../interfaces/ICase';
 import confirmRoute from '../routes/confirm.route';
 import IWallet from '../interfaces/IWallet';
+import attachRoute from '../routes/attach.route';
+import caseRoute from '../routes/case.route';
 
 const routes = (
   app: Express, 
@@ -16,6 +18,8 @@ const routes = (
   app.use('/enact/', enactRoute(process, wallet, requestServer));
   app.use('/propose/', proposeRoute(process, wallet));
   app.use('/confirm/', confirmRoute(process, wallet));
+  app.use('/attach/', attachRoute(process, wallet));
+  app.use('/case/', caseRoute(process));
 
   app.get("/", (_, res, next) => {
     res.sendStatus(200);
