@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import path from "path";
-import { Participant } from "../../src/classes/Participants";
+import Participants, { Participant } from "../../src/classes/Participants";
+import IProof from "../../src/interfaces/IProof";
 import broadcast from "../../src/services/broadcast.service";
 import request from "../../src/services/request.service";
 
@@ -40,6 +41,56 @@ class TestCase {
     }
     await sleep(500);
     return false;
+  }
+
+  static async replayTask(par: Participant, taskID: number) {
+      // replay task
+      console.log('\nReplay initiator', par.id, 'trying to enact task', taskID);
+      try {
+        await request(par, "GET", "/enact/" + taskID);
+        return true;
+      } catch (error) {
+        if (error instanceof Error 
+          && error.name === "500" && error.message.includes("failed verification")) {
+            console.log(error.message);
+            return false;
+        }
+        throw error;
+      }
+  }
+
+  static async checkProcessState(participants: Participant[], endEvent: number) {
+      const answers = new Array<IProof>;
+      (await Promise.all(broadcast(
+        request, 
+        participants, 
+        "", 
+        "GET", 
+        "/case/0"
+      )))
+      .forEach((ans) => {
+        const proof: IProof = JSON.parse(ans).message;
+        if (proof.newTokenState == null) {
+          throw new Error(`Malformed JSON: ${ans} (2)`);
+        }
+        // collect answers
+        answers.push(proof);
+      });
+
+      // all process states must match
+      let stable = false;
+      let endReached = false;
+      if (answers.every((p) => JSON.stringify(p) === JSON.stringify(answers[0]))) {
+        stable = true;
+      }
+
+      if (answers[0].newTokenState === endEvent) {
+        endReached = true;
+      } else {
+        endReached = false;
+      }
+
+      return { stable, endReached };
   }
 
   static generateTraces(

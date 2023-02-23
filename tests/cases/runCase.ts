@@ -58,13 +58,14 @@ const runCase = (async (options: {
     console.log("Composing up docker...");
     execute( `docker compose up -d` );
 
+    const conformingTraces: number[][][] = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString());
+    
     let traces: number[][][];
     if (options.traces.toGenerate > 0) {
       // generate new traces
       console.log("\nGenerate new traces...");
-      const conforming = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString());
       traces = TestCase.generateTraces(
-        conforming, 
+        conformingTraces, 
         options.traces.nrParticipants, 
         options.traces.nrTasks, 
         options.traces.toGenerate);
@@ -78,86 +79,45 @@ const runCase = (async (options: {
       traces = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/generated.json')).toString());
     }
 
-    // replay traces
-    let caught = 0;
-    for (const trace of traces) {
+     // wait for node to be ready
+     console.log("\nCheck if node instances are ready...");
+     const ready = await TestCase.isNodeReady([...participants.values()]);
 
-      // wait for node to be ready
-      console.log("\nCheck if node instances are ready...");
-      const ready = await TestCase.isNodeReady([...participants.values()]);
+     if (ready) {
+       console.log("Node instances are ready...");
+     } else {
+       throw new Error("Node did not boot up...");
+     }
 
-      if (ready) {
-        console.log("Node instances are ready...");
-      } else {
-        throw new Error("Node did not boot up...");
-      }
 
-      console.log("\nReplay trace...");
-      let conforming = 0;
+    // replay conforming traces
+    let conforming = 0;
+    for (const trace of conformingTraces) {
+      console.log("\nReplay conforming trace...");
       for (const task of trace) {
-        const parID = task[0];
+        const par = participants.get(task[0])!;
         const taskID = task[1];
         // replay task
-        console.log('\nReplay initiator', parID, 'trying to enact task', taskID);
-        try {
-          await request(participants.get(parID)!, "GET", "/enact/" + taskID);
-          console.log("OK!");
-          conforming++;
-        } catch (error) {
-          if (error instanceof Error 
-            && error.name === "500" && error.message.includes("failed verification")) {
-              console.log(error.message);
-              break;
-          }
-          throw error;
+        if (await TestCase.replayTask(par, taskID)) {
+          console.log("OK!")
+        } else {
+          assert(false, Red + "Conforming task rejected" + Reset);
+          break;
         }
       }
 
       // check process state of all
       console.log("\nCheck process state...");
-      const answers = new Array<IProof>;
-      (await Promise.all(broadcast(
-        request, 
-        [...options.participants.values()], 
-        "", 
-        "GET", 
-        "/case/0"
-      )))
-      .forEach((ans) => {
-        let proof: IProof;
-        try {
-          proof = JSON.parse(ans).message;
-        } catch (err) {
-          throw err;
-        }
-        if (proof.newTokenState == null) {
-          throw new Error(`Malformed JSON: ${ans} (2)`);
-        }
-        // collect answers
-        answers.push(proof);
-      });
-
-      // all process states must match
-      let stable: boolean = false;
-      let rejected: boolean = false;
-      if (!answers.every((p) => JSON.stringify(p) === JSON.stringify(answers[0]))) {
+      const state = await TestCase.checkProcessState([...participants.values()], options.traces.endEvent);
+      if (!state.stable) {
         assert(false, Red + "Process in unstable state!" + Reset);
-        console.error(answers);
       } else {
-        console.log(Green, "OK!", "Process is in a stable state", Reset);
-        stable = true;
-      }
-
-      // end event can't be reached
-      if (answers[0].newTokenState === options.traces.endEvent) {
-        assert(false, Red + "Non-conforming trace not caught!" + Reset);
-      } else {
-        console.log(Green, "OK!", "Non-conforming trace caught", Reset);
-        rejected = true;
-      }
-
-      if (stable && rejected) {
-        caught++;
+        if (state.endReached) {
+          console.log(Green, "OK!", "Process reached end event", Reset);
+          conforming++;
+        } else {
+          assert(false, Red + "Conforming trace rejected" + Reset);
+        }
       }
 
       // redeploy to start fresh case
@@ -177,8 +137,70 @@ const runCase = (async (options: {
       ));
     }
 
-    console.log("\nAll traces replayed...");
+    // replay non-conforming traces
+    let caught = 0;
+    for (const trace of traces) {      
+
+      console.log("\nReplay non-conforming trace...");
+      for (const task of trace) {
+        const parID = task[0];
+        const taskID = task[1];
+        // replay task
+        console.log('\nReplay initiator', parID, 'trying to enact task', taskID);
+        try {
+          await request(participants.get(parID)!, "GET", "/enact/" + taskID);
+          console.log("OK!");
+        } catch (error) {
+          if (error instanceof Error 
+            && error.name === "500" && error.message.includes("failed verification")) {
+              console.log(error.message);
+              break;
+          }
+          throw error;
+        }
+      }
+
+      // check process state of all
+      console.log("\nCheck process state...");
+      const state = await TestCase.checkProcessState([...participants.values()], options.traces.endEvent);
+      if (!state.stable) {
+        assert(false, Red + "Process in unstable state!" + Reset);
+      } else {
+        if (state.endReached) {
+          assert(false, Red + "Non-conforming trace not caught!" + Reset);
+        } else {
+          console.log(Green, "OK!", "Non-conforming trace caught", Reset);
+          caught++;
+        }
+      }
+
+      // redeploy to start fresh case
+      console.log("\nRe-deploy and re-attach contract...");
+      const res = execute( `npm run deploy` )!;
+      const address = res
+      .substring(
+        res.indexOf("[") + 1, 
+        res.lastIndexOf("]")
+      );
+      await Promise.all(broadcast(
+        request, 
+        [...options.participants.values()], 
+        "", 
+        "PUT", 
+        "/attach/" + address
+      ));
+    }
+
+    // communicate result
+    console.log("\n\nAll traces replayed...");
     console.log(caught, "non-conforming traces rejected of", traces.length);
+    console.log(conforming, "conforming traces accepted of", conformingTraces.length);
+
+    if (conforming === conformingTraces.length) {
+      console.log(Green, "All conforming traces accepted!", Reset);
+    } else {
+      console.log(Red, "Conforming traces rejected!", Reset);
+    }
 
     if (caught === traces.length) {
       console.log(Green, "All traces caught!", Reset);
