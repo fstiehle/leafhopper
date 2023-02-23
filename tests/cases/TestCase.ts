@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import path from "path";
-import Participants, { Participant } from "../../src/classes/Participants";
+import { Participant } from "../../src/classes/Participants";
 import IProof from "../../src/interfaces/IProof";
 import broadcast from "../../src/services/broadcast.service";
 import request from "../../src/services/request.service";

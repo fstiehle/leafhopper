@@ -5,7 +5,6 @@ import Participants from "../../src/classes/Participants";
 import request from "../../src/services/request.service";
 import broadcast from "../../src/services/broadcast.service";
 import { assert } from "console";
-import IProof from "../../src/interfaces/IProof";
 
 const Green = "\x1b[32m";
 const Red = "\x1b[31m"
