@@ -23,8 +23,24 @@ const sleep = (ms: number) => {
 
 class TestCase {
 
+  static redeploy(): [n: number, s: string]{
+    console.log("\nRe-deploy and re-attach contract...");
+    const res = execute( `npm run deploy` )!;
+    const address = res
+    .substring(
+      res.indexOf("[") + 1, 
+      res.lastIndexOf("]")
+    );
+    const cost = res
+    .substring(
+      res.indexOf("{") + 1, 
+      res.lastIndexOf("}")
+    );
+    return [Number.parseInt(cost), address];
+  }
+
   static async isNodeReady(participants: Participant[]) {
-    for (let index = 0; index < 10; index++) {
+    for (let index = 0; index < 20; index++) {
       try {
         console.log(await Promise.all(broadcast(
           request, 
@@ -144,21 +160,23 @@ class TestCase {
   static backupConfigFolder(config_folder: string) {
     execute( `npx ncp ${path.join(config_folder, "/participants.config.ts")} ${path.join(config_folder, "/_participants.config.ts")}` );
     execute( `npx ncp ${path.join(config_folder, "/leafhopper.config.ts")} ${path.join(config_folder, "/_leafhopper.config.ts")}` );
+    execute( `npx ncp ${path.join(config_folder, "/deployment.config.ts")} ${path.join(config_folder, "/_deployment.config.ts")}` );
   }
 
   static restoreConfigFolder(config_folder: string) {
     execute( `npx ncp ${path.join(config_folder, "/_participants.config.ts")} ${path.join(config_folder, "/participants.config.ts")}` );
     execute( `npx ncp ${path.join(config_folder, "/_leafhopper.config.ts")} ${path.join(config_folder, "/leafhopper.config.ts")}` );
+    execute( `npx ncp ${path.join(config_folder, "/_deployment.config.ts")} ${path.join(config_folder, "/deployment.config.ts")}` );
   }
 
   static copyConfigFiles(dir: string, CONFIG_FOLDER: string) {
-    for (const file of ['participants.config.ts', 'leafhopper.config.ts', 'model/case.bpmn'])
+    for (const file of ['participants.config.ts', 'leafhopper.config.ts', 'deployment.config.ts', 'model/case.bpmn'])
       execute( `npx ncp ${path.join(dir, "../config/", file)} ${path.join(CONFIG_FOLDER, file)}` );
     execute( `npx ncp ${path.join(dir, "../config/docker-compose.yml")} ${path.join("./docker-compose.yml")}` );
   }
 
   static cleanUpConfigFiles(CONFIG_FOLDER: string) {
-    for (const file of ['_participants.config.ts', '_leafhopper.config.ts', 'model/case.bpmn'])
+    for (const file of ['_participants.config.ts', '_leafhopper.config.ts', '/_deployment.config.ts', 'model/case.bpmn'])
       execute( `npx rimraf ${path.join(CONFIG_FOLDER, file)}` );
     execute( `npx rimraf ${path.join("./docker-compose.yml")}` );
   }

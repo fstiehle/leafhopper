@@ -4,8 +4,18 @@ import ISignable from "../interfaces/ISignable";
 import Step, { StepProperties } from "./Step";
 
 export default class ConfirmMessage implements ISignable, IMessage {
-  step: Step | null = null;
+  step: Step;
   signatures: string[] = new Array<string>();
+
+  constructor() {
+    this.step = new Step({
+      index: 0,
+      from: 0, 
+      caseID: 0,
+      taskID: 0, 
+      newTokenState: 1,
+    });
+  }
 
   copyFromJSON(obj: {step: StepProperties, signature: string}): ConfirmMessage {
     obj.step = new Step(obj.step);
@@ -13,25 +23,17 @@ export default class ConfirmMessage implements ISignable, IMessage {
   }
 
   getSignable(): { types: string[]; value: any[]; } {
-    return this.step ? this.step.getABIEncoding() : { types: [], value: [] };
+    return this.step.getSignable();
   }
 
   getProof(): IProof {
-    if (!this.step) {
-      return {
-        caseID: 0, 
-        from: 0, 
-        taskID: 0, 
-        newTokenState: 0, 
-        signatures: []
-      }
-    }
     return {
-      caseID: this.step.caseID, 
+      index: this.step.index,
       from: this.step.from, 
+      caseID: this.step.caseID, 
       taskID: this.step.taskID, 
       newTokenState: this.step.newTokenState,
-      signatures: this.signatures
+      signatures: this.signatures,
     }
   }
 }

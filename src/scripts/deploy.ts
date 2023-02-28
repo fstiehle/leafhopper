@@ -27,7 +27,7 @@ import fs from 'fs';
   } 
 
   const receipt = await tx.wait(1);
-  console.log("Gas used:", receipt?.gasUsed.toString());
+  console.log(`Gas used: {${receipt?.gasUsed.toString()}}`);
 
   const leafhopper = fs.readFileSync('./dist/config/leafhopper.config.js')
   .toString()

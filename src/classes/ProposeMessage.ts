@@ -14,6 +14,6 @@ export default class ProposeMessage implements ISignable, IMessage {
   }
 
   getSignable(): { types: string[]; value: any[]; } {
-    return this.step ? this.step.getABIEncoding() : { types: [], value: [] };
+    return this.step ? this.step.getSignable() : { types: [], value: [] };
   }
 }

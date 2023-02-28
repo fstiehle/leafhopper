@@ -18,8 +18,8 @@ export default class Enforcement {
     if (step.caseID !== process.caseID) {
       return false;
     }
-    if (step.index > process.steps.length) {
-      console.info(`Step index too high`);
+    if (step.index === process.index + 1) {
+      console.info(`Step index invalid`);
       return false;
     }
 

@@ -1,8 +1,4 @@
-type ABIEncoding = {
-  types: string[];
-  // eslint-disable-next-line
-  value: any[];
-}
+import { ABIEncoding } from "./IProof";
 
 export default interface ISignable {
   getSignable(): ABIEncoding;

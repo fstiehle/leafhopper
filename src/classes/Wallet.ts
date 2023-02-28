@@ -50,8 +50,9 @@ export default class Wallet implements IWallet {
     }
   }
 
-  submit(proof?: IProof | undefined): Promise<boolean> {
-    throw new Error("Method not implemented.");
+  async submit(proof: IProof) {
+    if (this.contract == null) return null;
+    return await this.contract.submit(proof);
   }
 
   produceSignature(toSign: ISignable): Promise<string> {

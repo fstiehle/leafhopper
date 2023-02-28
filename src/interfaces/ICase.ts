@@ -6,4 +6,5 @@ export default interface ICase {
   steps: IProof[];
   tokenState: number;
   participants: Participants;
+  index: number;
 }

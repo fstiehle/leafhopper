@@ -33,7 +33,7 @@ const enactController = (
     const proposeMessage = new ProposeMessage();
     proposeMessage.from = wallet.identity;
     proposeMessage.step = new Step({
-      index: processCase.steps.length,
+      index: processCase.index + 1,
       from: wallet.identity,
       caseID: processCase.caseID,
       taskID: taskID,
@@ -58,7 +58,7 @@ const enactController = (
 
       const confirmation = new ConfirmMessage();
       confirmation.signatures[wallet.identity] = proposeMessage.signature;
-      confirmation.step = proposeMessage.step;
+      confirmation.step = proposeMessage.step!;
 
       results.forEach((result) => {
         const receivedAnswer = new ProposeMessage();
@@ -93,6 +93,7 @@ const enactController = (
 
       // responds to local BPMS with OK 
       processCase.steps.push(confirmation.getProof());
+      processCase.index++;
       processCase.tokenState = confirmation.step!.newTokenState;
       res.setHeader('Content-Type', 'application/json');
       res.status(200).send(JSON.stringify({message: confirmation}));

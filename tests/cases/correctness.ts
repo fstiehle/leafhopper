@@ -10,15 +10,14 @@ const Green = "\x1b[32m";
 const Red = "\x1b[31m"
 const Reset = "\x1b[0m";
 
-const runCase = (async (options: {
+const runCorrectnessCheck = (async (options: {
   configFolder: string, 
   caseDir: string, 
   mnemonic: string, 
   traces: {
     toGenerate: number,
     nrTasks: number,
-    nrParticipants: number,
-    endEvent: number
+    nrParticipants: number
   },
   participants: Participants
   }) => {
@@ -57,8 +56,8 @@ const runCase = (async (options: {
     console.log("Composing up docker...");
     execute( `docker compose up -d` );
 
-    const conformingTraces: number[][][] = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString());
-    
+    const conformingTraces: number[][][] = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString()).conforming;
+
     let traces: number[][][];
     if (options.traces.toGenerate > 0) {
       // generate new traces
@@ -82,12 +81,11 @@ const runCase = (async (options: {
      console.log("\nCheck if node instances are ready...");
      const ready = await TestCase.isNodeReady([...participants.values()]);
 
-     if (ready) {
-       console.log("Node instances are ready...");
-     } else {
-       throw new Error("Node did not boot up...");
-     }
-
+    if (ready) {
+      console.log("Node instances are ready...");
+    } else {
+      throw new Error("Node did not boot up...");
+    }
 
     // replay conforming traces
     let conforming = 0;
@@ -107,7 +105,7 @@ const runCase = (async (options: {
 
       // check process state of all
       console.log("\nCheck process state...");
-      const state = await TestCase.checkProcessState([...participants.values()], options.traces.endEvent);
+      const state = await TestCase.checkProcessState([...participants.values()], 0);
       if (!state.stable) {
         assert(false, Red + "Process in unstable state!" + Reset);
       } else {
@@ -121,12 +119,7 @@ const runCase = (async (options: {
 
       // redeploy to start fresh case
       console.log("\nRe-deploy and re-attach contract...");
-      const res = execute( `npm run deploy` )!;
-      const address = res
-      .substring(
-        res.indexOf("[") + 1, 
-        res.lastIndexOf("]")
-      );
+      const [_, address] = await TestCase.redeploy();
       await Promise.all(broadcast(
         request, 
         [...options.participants.values()], 
@@ -161,7 +154,7 @@ const runCase = (async (options: {
 
       // check process state of all
       console.log("\nCheck process state...");
-      const state = await TestCase.checkProcessState([...participants.values()], options.traces.endEvent);
+      const state = await TestCase.checkProcessState([...participants.values()], 0);
       if (!state.stable) {
         assert(false, Red + "Process in unstable state!" + Reset);
       } else {
@@ -175,12 +168,7 @@ const runCase = (async (options: {
 
       // redeploy to start fresh case
       console.log("\nRe-deploy and re-attach contract...");
-      const res = execute( `npm run deploy` )!;
-      const address = res
-      .substring(
-        res.indexOf("[") + 1, 
-        res.lastIndexOf("]")
-      );
+      const [_, address] = await TestCase.redeploy();
       await Promise.all(broadcast(
         request, 
         [...options.participants.values()], 
@@ -202,7 +190,7 @@ const runCase = (async (options: {
     }
 
     if (caught === traces.length) {
-      console.log(Green, "All traces caught!", Reset);
+      console.log(Green, "All non-conforming traces caught!", Reset);
     } else {
       console.log(Red, "Non-conforming traces missed!", Reset);
     }
@@ -212,7 +200,7 @@ const runCase = (async (options: {
 
   } finally {
     // stopping
-    if (ganacheInstance) {
+    if (ganacheInstance != null) {
       console.log("Stopping ganache...");
       execute( `npx ganache instances stop ${ganacheInstance}` );
     }
@@ -236,4 +224,4 @@ const runCase = (async (options: {
 
 });
 
-export default runCase;
+export default runCorrectnessCheck;

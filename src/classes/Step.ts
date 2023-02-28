@@ -1,3 +1,5 @@
+import ISignable from "../interfaces/ISignable";
+
 export interface StepProperties {
   index: number;
   from: number;
@@ -7,7 +9,7 @@ export interface StepProperties {
 }
 
 /* Step encodes all the information necessary for a transition. */
-export default class Step implements StepProperties {
+export default class Step implements StepProperties, ISignable {
   index: number;
   from: number;
   caseID: number;
@@ -22,7 +24,7 @@ export default class Step implements StepProperties {
     this.newTokenState = props.newTokenState;
   }
 
-  getABIEncoding() {
+  getSignable() {
     const payload: any[] = [this.index, this.caseID, this.from, this.taskID, this.newTokenState];
     const types = ['uint', 'uint', 'uint', 'uint', 'uint'];
     return {

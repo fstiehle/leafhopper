@@ -1,7 +1,14 @@
+export type ABIEncoding = {
+  types: string[];
+  // eslint-disable-next-line
+  value: any[];
+}
+
 export default interface IProof {
-  caseID: number, 
-  from: number, 
-  taskID: number, 
-  newTokenState: number, 
-  signatures: string[]
+  index: number;
+  from: number;
+  caseID: number;
+  taskID: number; 
+  newTokenState: number;
+  signatures: string[];
 }
