@@ -6,8 +6,8 @@ import ConfirmMessage from "../classes/ConfirmMessage";
 
 export default class Enforcement {
 
-  static enact(tokenState: number, taskID: number, participantID: number) {
-    return _enact(tokenState, taskID, participantID);
+  static enact(tokenState: number, taskID: number, conditionState: number, participantID: number) {
+    return _enact(tokenState, taskID, conditionState, participantID);
   }
 
   static check(process: ICase, wallet: IWallet, proposal: ProposeMessage) {
@@ -15,11 +15,14 @@ export default class Enforcement {
       return false;
     }
     const step = proposal.step;
+    console.log(step)
+    console.log(process)
     if (step.caseID !== process.caseID) {
       return false;
     }
-    if (step.index === process.index + 1) {
-      console.info(`Step index invalid`);
+
+    if (step.index !== process.index + 1) {
+      console.warn(`Step index invalid`);
       return false;
     }
 
@@ -27,18 +30,20 @@ export default class Enforcement {
     const proposedTokenState = Enforcement.enact(
       process.tokenState, 
       step.taskID,
+      step.conditionState,
       step.from
     );
     if (proposedTokenState === process.tokenState
     || step.newTokenState !== proposedTokenState
     ) {
+      console.warn("Task", step.taskID, "Failed conformance check");
       return false; 
     }
 
     // check integrity, i.e., check signature
     const expectedAddress = process.participants.get(step.from)!.pubKey;
     if (wallet.verify(proposal, proposal.signature) !== expectedAddress) {
-      console.info(`Proposal ${step.taskID} did not pass integrity checks`);
+      console.warn(`Proposal ${step.taskID} did not pass integrity checks`);
       return false;
     }
 
@@ -52,7 +57,7 @@ export default class Enforcement {
 
     process.participants.forEach((par, index) => {
       if (wallet.verify(confirmation, confirmation.signatures[index]) !== par.pubKey) {
-        console.info(`Signature of participant: ${par} not matching`);
+        console.warn(`Signature of participant: ${par} not matching`);
         return false;
       }
     });

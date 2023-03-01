@@ -35,6 +35,7 @@ const confirmController = (processCase: ICase, wallet: IWallet) => {
     // install as new state
     processCase.steps.push(confirmation.getProof());
     processCase.tokenState = confirmation.step.newTokenState;
+    ++processCase.index;
     res.sendStatus(200);
     return next();
   }

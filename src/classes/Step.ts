@@ -5,6 +5,7 @@ export interface StepProperties {
   from: number;
   caseID: number;
   taskID: number;
+  conditionState: number;
   newTokenState: number;
 }
 
@@ -14,6 +15,7 @@ export default class Step implements StepProperties, ISignable {
   from: number;
   caseID: number;
   taskID: number;
+  conditionState: number;
   newTokenState: number;
 
   constructor(props: StepProperties) {
@@ -22,11 +24,14 @@ export default class Step implements StepProperties, ISignable {
     this.caseID = props.caseID;
     this.taskID = props.taskID;
     this.newTokenState = props.newTokenState;
+    this.conditionState = props.conditionState;
   }
 
   getSignable() {
-    const payload: any[] = [this.index, this.caseID, this.from, this.taskID, this.newTokenState];
-    const types = ['uint', 'uint', 'uint', 'uint', 'uint'];
+    const payload: any[] = [
+      this.index, this.caseID, this.from, this.taskID, this.newTokenState, this.conditionState
+    ];
+    const types = ['uint', 'uint', 'uint', 'uint', 'uint', 'uint'];
     return {
       types: types,
       value: payload

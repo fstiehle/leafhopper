@@ -8,7 +8,7 @@ import IWallet from '../interfaces/IWallet';
 import ICase from '../interfaces/ICase';
 
 const enactRoute = (process: ICase, wallet: IWallet, requestServer: IRequestServer): Router => {
-  return express.Router().get('/:id([0-9]+)', enactController(process, wallet, requestServer));
+  return express.Router().post('/:id([0-9]+)', enactController(process, wallet, requestServer));
 }
 
 export default enactRoute;

@@ -7,4 +7,6 @@ export default interface ICase {
   tokenState: number;
   participants: Participants;
   index: number;
+
+  reset(): void;
 }

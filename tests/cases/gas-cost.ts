@@ -20,6 +20,10 @@ const benchmarkCase = async (
   participants: Wallet[],
   traces: number[][]) => {
 
+  if (await participants[0].isDisputed() === true) {
+    throw new Error("Contract already disputed!");
+  }
+
   const gasCost = new Map<string, number>();
   const tx = await participants[0].submit(state);
   let total = Number.parseInt((await tx.wait(1)).gasUsed);
@@ -66,9 +70,6 @@ const runGasCost = (async (options: {
   mnemonic: string, 
   skeys: string[],
   traces: {
-    toGenerate: number,
-    nrTasks: number,
-    nrParticipants: number,
     middleEvent: number
   }
   }) => {
@@ -85,7 +86,7 @@ const runGasCost = (async (options: {
   // generate 
   try {
     // generate
-    //execute( `npm run generate ${path.join("./src/config/model/case.bpmn")}` );
+    execute( `npm run generate ${path.join("./src/config/model/case.bpmn")}` );
 
     // load traces
     const traces: any = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString());
@@ -113,7 +114,7 @@ const runGasCost = (async (options: {
 
     let state: IProof;
     // best case: only submit final state
-    console.log("Benchmark best case scenario: only submit final state");
+    console.log("\nBenchmark best case scenario: only submit final state");
     const final = new ConfirmMessage();
     final.step.newTokenState = 0;
     final.step.index = 1;
@@ -137,12 +138,12 @@ const runGasCost = (async (options: {
     });
 
     // average case: dispute with state after half of the process
-    console.log("Benchmark average case scenario: dispute after half of the process");
+    console.log("\nBenchmark average case scenario: dispute after half of the process");
     const half = new ConfirmMessage();
     half.step.newTokenState = options.traces.middleEvent;
     half.step.index = 1;
     for (let index = 0; index < participants.length; index++) {
-      final.signatures.push(await participants[index].produceSignature(final.step));
+      half.signatures.push(await participants[index].produceSignature(final.step));
     }
     state = final.getProof();
     const avgTrace = traces.conforming[traces.indexMediumCase];
@@ -163,7 +164,7 @@ const runGasCost = (async (options: {
     });
 
     // Worst Case: dispute at start of process
-    console.log("Benchmark worst case scenario: stuck in start event");
+    console.log("\nBenchmark worst case scenario: stuck in start event");
     state = new ConfirmMessage().getProof();
     caseCost = await benchmarkCase(state, 
       provider, 
@@ -172,7 +173,9 @@ const runGasCost = (async (options: {
 
     caseCost.set("Deployment", dCost);
     logCost(caseCost);
-    
+
+    console.log("\nAll done!");
+
   } catch(err) {
     console.error(err);
 
@@ -184,12 +187,12 @@ const runGasCost = (async (options: {
     }
     // clean up case
     console.log("Restore and clean up...");
-    //TestCase.restoreConfigFolder(options.configFolder);
+    TestCase.restoreConfigFolder(options.configFolder);
     // clean up
-    //TestCase.cleanUpConfigFiles(options.configFolder);
-    //execute( `npm run clean` );
+    TestCase.cleanUpConfigFiles(options.configFolder);
+    execute( `npm run clean` );
     // re-generate from old config
-    //execute( `npm run generate` );
+    execute( `npm run generate` );
   }
 
 });

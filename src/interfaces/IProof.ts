@@ -10,5 +10,6 @@ export default interface IProof {
   caseID: number;
   taskID: number; 
   newTokenState: number;
+  conditionState: number;
   signatures: string[];
 }

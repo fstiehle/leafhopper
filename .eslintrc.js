@@ -18,5 +18,6 @@ module.exports = {
         "@typescript-eslint"
     ],
     "rules": {
+        "no-constant-condition": "off"
     }
 }

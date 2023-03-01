@@ -7,6 +7,7 @@ import ProposeMessage from '../classes/ProposeMessage';
 import ConfirmMessage from '../classes/ConfirmMessage';
 import Step from '../classes/Step';
 import broadcast from '../services/broadcast.service';
+import EnactMessage from '../classes/EnactMessage';
 
 /**
  * 
@@ -29,6 +30,19 @@ const enactController = (
     if (await wallet.isDisputed()) {
       return next(new Error(`Process Channel is disputed.`));
     }
+
+    const enact = new EnactMessage();
+    try {
+      enact.copyFromJSON(req.body.message);
+    } catch (err) {
+      console.warn(err);
+      return next(new Error(`Malformed JSON: ${req.body}`));
+    }
+
+    if (enact.taskID !== taskID) {
+      return next(new Error(`Mismatched taskID: ${enact.taskID} !== ${taskID}`));
+    }
+
     // Propose enactment to all other nodes, collect OKs (via /propose/)  
     const proposeMessage = new ProposeMessage();
     proposeMessage.from = wallet.identity;
@@ -37,9 +51,14 @@ const enactController = (
       from: wallet.identity,
       caseID: processCase.caseID,
       taskID: taskID,
+      conditionState: enact.conditionState,
       newTokenState: Enforcement.enact(
-        processCase.tokenState, taskID, wallet.identity)
-    });
+        processCase.tokenState, 
+        taskID, 
+        enact.conditionState,
+        wallet.identity
+      )});
+
     proposeMessage.signature = await wallet.produceSignature(proposeMessage);
 
     // Broadcast 
@@ -93,7 +112,7 @@ const enactController = (
 
       // responds to local BPMS with OK 
       processCase.steps.push(confirmation.getProof());
-      processCase.index++;
+      ++processCase.index;
       processCase.tokenState = confirmation.step!.newTokenState;
       res.setHeader('Content-Type', 'application/json');
       res.status(200).send(JSON.stringify({message: confirmation}));

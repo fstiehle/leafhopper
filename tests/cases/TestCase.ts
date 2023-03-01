@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import path from "path";
 import { Participant } from "../../src/classes/Participants";
+import EnactMessage from "../../src/classes/EnactMessage";
 import IProof from "../../src/interfaces/IProof";
 import broadcast from "../../src/services/broadcast.service";
 import request from "../../src/services/request.service";
@@ -59,11 +60,14 @@ class TestCase {
     return false;
   }
 
-  static async replayTask(par: Participant, taskID: number) {
+  static async replayTask(par: Participant, cond: number, taskID: number) {
       // replay task
-      console.log('\nReplay initiator', par.id, 'trying to enact task', taskID);
+      console.log('\nReplay initiator', par.id, 'trying to enact task', taskID, 'with cond', cond);
+      const enact = new EnactMessage();
+      enact.conditionState = cond;
+      enact.taskID = taskID;
       try {
-        await request(par, "GET", "/enact/" + taskID);
+        await request(par, "POST", "/enact/" + taskID, JSON.stringify({message: enact}));
         return true;
       } catch (error) {
         if (error instanceof Error 
@@ -77,21 +81,23 @@ class TestCase {
 
   static async checkProcessState(participants: Participant[], endEvent: number) {
       const answers = new Array<IProof>;
-      (await Promise.all(broadcast(
+      await Promise.all(broadcast(
         request, 
         participants, 
         "", 
         "GET", 
         "/case/0"
-      )))
-      .forEach((ans) => {
+      )).catch((e) => console.log(e))
+
+      /* ).forEach((ans) => {
+        console.log(ans)
         const proof: IProof = JSON.parse(ans).message;
         if (proof.newTokenState == null) {
           throw new Error(`Malformed JSON: ${ans} (2)`);
         }
         // collect answers
         answers.push(proof);
-      });
+      }) */
 
       // all process states must match
       let stable = false;

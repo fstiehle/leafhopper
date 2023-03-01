@@ -1,1 +1,1 @@
-export default interface IEnact {(tokenState: number, taskID: number, participantID: number): number;}
+export default interface IEnact {(tokenState: number, taskID: number, cond: number, participantID: number): number;}

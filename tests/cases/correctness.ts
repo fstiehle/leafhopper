@@ -22,7 +22,7 @@ const runCorrectnessCheck = (async (options: {
   participants: Participants
   }) => {
 
-  let ganacheInstance;
+  let ganacheInstance: string|null = null;
 
   // backup config files in root folder
   TestCase.backupConfigFolder(options.configFolder);
@@ -94,8 +94,9 @@ const runCorrectnessCheck = (async (options: {
       for (const task of trace) {
         const par = participants.get(task[0])!;
         const taskID = task[1];
+        const cond = task[2];
         // replay task
-        if (await TestCase.replayTask(par, taskID)) {
+        if (await TestCase.replayTask(par, cond, taskID)) {
           console.log("OK!")
         } else {
           assert(false, Red + "Conforming task rejected" + Reset);
@@ -119,7 +120,7 @@ const runCorrectnessCheck = (async (options: {
 
       // redeploy to start fresh case
       console.log("\nRe-deploy and re-attach contract...");
-      const [_, address] = await TestCase.redeploy();
+      const [_, address] = TestCase.redeploy();
       await Promise.all(broadcast(
         request, 
         [...options.participants.values()], 
@@ -135,20 +136,15 @@ const runCorrectnessCheck = (async (options: {
 
       console.log("\nReplay non-conforming trace...");
       for (const task of trace) {
-        const parID = task[0];
+        const par = participants.get(task[0])!;
         const taskID = task[1];
+        const cond = task[2];
         // replay task
-        console.log('\nReplay initiator', parID, 'trying to enact task', taskID);
-        try {
-          await request(participants.get(parID)!, "GET", "/enact/" + taskID);
-          console.log("OK!");
-        } catch (error) {
-          if (error instanceof Error 
-            && error.name === "500" && error.message.includes("failed verification")) {
-              console.log(error.message);
-              break;
-          }
-          throw error;
+         if (await TestCase.replayTask(par, cond, taskID)) {
+          console.log("OK!")
+        } else {
+          assert(false, Red + "Conforming task rejected" + Reset);
+          break;
         }
       }
 
@@ -168,7 +164,7 @@ const runCorrectnessCheck = (async (options: {
 
       // redeploy to start fresh case
       console.log("\nRe-deploy and re-attach contract...");
-      const [_, address] = await TestCase.redeploy();
+      const [_, address] = TestCase.redeploy();
       await Promise.all(broadcast(
         request, 
         [...options.participants.values()], 
@@ -195,6 +191,8 @@ const runCorrectnessCheck = (async (options: {
       console.log(Red, "Non-conforming traces missed!", Reset);
     }
 
+    console.log("\nAll done!");
+
   } catch(error) {
       console.log(Red, error, Reset);
 
@@ -206,8 +204,8 @@ const runCorrectnessCheck = (async (options: {
     }
 
     console.log("Stopping and cleaning up docker...");
-    execute( `docker compose down` );
-    execute( `docker compose rm -f` );
+    //execute( `docker compose down` );
+    //execute( `docker compose rm -f` );
     //execute( `docker rmi $(docker compose images -q)` );
 
     // restore

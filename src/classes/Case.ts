@@ -14,4 +14,11 @@ export default class Case implements ICase {
     this.participants = participants;
     this.steps.push(new ConfirmMessage().getProof());
   }
+
+  reset(): void {
+    this.caseID = 0;
+    this.tokenState = 1;
+    this.index = 0;
+    this.steps = new Array<IProof>();
+  }
 }
