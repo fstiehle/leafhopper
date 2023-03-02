@@ -33,6 +33,7 @@ const confirmController = (processCase: ICase, wallet: IWallet) => {
       return next(new Error(`Task ${taskID} failed confirmation`));
     }
     // install as new state
+    console.log('ok, confirming', taskID);
     processCase.steps.push(confirmation.getProof());
     processCase.tokenState = confirmation.step.newTokenState;
     ++processCase.index;

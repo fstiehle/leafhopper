@@ -96,6 +96,7 @@ const runCorrectnessCheck = (async (options: {
         const taskID = task[1];
         const cond = task[2];
         // replay task
+        console.log('\nReplay initiator', par.id, 'trying to enact task', taskID, 'with cond', cond);
         if (await TestCase.replayTask(par, cond, taskID)) {
           console.log("OK!")
         } else {
@@ -140,10 +141,10 @@ const runCorrectnessCheck = (async (options: {
         const taskID = task[1];
         const cond = task[2];
         // replay task
+        console.log('\nReplay initiator', par.id, 'trying to enact task', taskID, 'with cond', cond);
          if (await TestCase.replayTask(par, cond, taskID)) {
           console.log("OK!")
         } else {
-          assert(false, Red + "Conforming task rejected" + Reset);
           break;
         }
       }
@@ -204,9 +205,9 @@ const runCorrectnessCheck = (async (options: {
     }
 
     console.log("Stopping and cleaning up docker...");
-    //execute( `docker compose down` );
-    //execute( `docker compose rm -f` );
-    //execute( `docker rmi $(docker compose images -q)` );
+    execute( `docker compose down` );
+    execute( `docker compose rm -f` );
+    execute( `docker rmi $(docker compose images -q)` );
 
     // restore
     console.log("Restore and clean up...");

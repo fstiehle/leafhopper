@@ -12,7 +12,7 @@ export default class Case implements ICase {
 
   constructor(participants: Participants) {
     this.participants = participants;
-    this.steps.push(new ConfirmMessage().getProof());
+    this.reset();
   }
 
   reset(): void {
@@ -20,5 +20,6 @@ export default class Case implements ICase {
     this.tokenState = 1;
     this.index = 0;
     this.steps = new Array<IProof>();
+    this.steps.push(new ConfirmMessage().getProof());
   }
 }

@@ -14,12 +14,12 @@ contract ProcessChannel {
     uint taskID;
     uint newTokenState;
     uint condState;
-    bytes[3] signatures;
+    bytes[5] signatures;
   }
   uint public tokenState = 1;
   uint public index = 0;
   // TODO: better performance with mapping?
-  address[3] public participants;
+  address[5] public participants;
 
   /// Timestamps for the challenge-response dispute window
   uint public disputeMadeAtUNIX = 0;
@@ -30,7 +30,7 @@ contract ProcessChannel {
    * in the order (BulkBuyer, Manufacturer, Middleman, Supplier, SpecialCarrier)
    * @param _disputeWindowInUNIX time for the dispute window to remain open in UNIX.
    */
-  constructor(address[3] memory _participants, uint _disputeWindowInUNIX) {
+  constructor(address[5] memory _participants, uint _disputeWindowInUNIX) {
     participants = _participants;
     disputeWindowInUNIX = _disputeWindowInUNIX;
   }
@@ -63,7 +63,7 @@ contract ProcessChannel {
       abi.encode(_step.index, _step.caseID, _step.from, _step.taskID, _step.newTokenState, _step.condState)
     );
 
-    for (uint i = 0; i < 3; i++) {
+    for (uint i = 0; i < 5; i++) {
       if (payload.toEthSignedMessageHash().recover(_step.signatures[i]) != participants[i]) {
         return false;
       }
@@ -92,18 +92,58 @@ contract ProcessChannel {
           _tokenState |= 4;
           break;
         }
-        if (msg.sender == participants[2] && 2 == id && (_tokenState & 4 == 4)) {
-          _tokenState &= ~uint(4);
+        if (msg.sender == participants[1] && 2 == id && (_tokenState & 8 == 8)) {
+          _tokenState &= ~uint(8);
           _tokenState |= 0;
+          break;
+        }
+        if (msg.sender == participants[1] && 3 == id && (_tokenState & 4 == 4)) {
+          _tokenState &= ~uint(4);
+          _tokenState |= 16;
+          break;
+        }
+        if (msg.sender == participants[2] && 4 == id && (_tokenState & 32 == 32)) {
+          _tokenState &= ~uint(32);
+          _tokenState |= 8;
+          break;
+        }
+        if (msg.sender == participants[2] && 5 == id && (_tokenState & 16 == 16)) {
+          _tokenState &= ~uint(16);
+          _tokenState |= 64;
+          break;
+        }
+        if (msg.sender == participants[3] && 6 == id && (_tokenState & 64 == 64)) {
+          _tokenState &= ~uint(64);
+          _tokenState |= 128;
+          break;
+        }
+        if (msg.sender == participants[4] && 7 == id && (_tokenState & 128 == 128)) {
+          _tokenState &= ~uint(128);
+          _tokenState |= 256;
+          break;
+        }
+        if (msg.sender == participants[3] && 8 == id && (_tokenState & 256 == 256)) {
+          _tokenState &= ~uint(256);
+          _tokenState |= 32;
           break;
         }
     } while (false);
 
     while(_tokenState != 0) {
-      if ((cond & 1 == 1) && (_tokenState & 2 == 2)) {
-        _tokenState &= ~uint(2);
-        _tokenState |= 0;
-        break; // is end
+      if ((cond & 1 == 1) && (_tokenState & 64 == 64)) {
+        _tokenState &= ~uint(64);
+        _tokenState |= 256;
+        continue;
+      }
+      if ((cond & 2 == 2) && (_tokenState & 16 == 16)) {
+        _tokenState &= ~uint(16);
+        _tokenState |= 32;
+        continue;
+      }
+      if ((cond & 4 == 4) && (_tokenState & 4 == 4)) {
+        _tokenState &= ~uint(4);
+        _tokenState |= 8;
+        continue;
       }
       break;
     }

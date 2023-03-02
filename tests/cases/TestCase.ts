@@ -25,7 +25,6 @@ const sleep = (ms: number) => {
 class TestCase {
 
   static redeploy(): [n: number, s: string]{
-    console.log("\nRe-deploy and re-attach contract...");
     const res = execute( `npm run deploy` )!;
     const address = res
     .substring(
@@ -62,7 +61,6 @@ class TestCase {
 
   static async replayTask(par: Participant, cond: number, taskID: number) {
       // replay task
-      console.log('\nReplay initiator', par.id, 'trying to enact task', taskID, 'with cond', cond);
       const enact = new EnactMessage();
       enact.conditionState = cond;
       enact.taskID = taskID;
@@ -81,23 +79,20 @@ class TestCase {
 
   static async checkProcessState(participants: Participant[], endEvent: number) {
       const answers = new Array<IProof>;
-      await Promise.all(broadcast(
+      (await Promise.all(broadcast(
         request, 
         participants, 
         "", 
         "GET", 
         "/case/0"
-      )).catch((e) => console.log(e))
-
-      /* ).forEach((ans) => {
-        console.log(ans)
+      ))).forEach((ans) => {
         const proof: IProof = JSON.parse(ans).message;
         if (proof.newTokenState == null) {
           throw new Error(`Malformed JSON: ${ans} (2)`);
         }
         // collect answers
         answers.push(proof);
-      }) */
+      })
 
       // all process states must match
       let stable = false;
@@ -135,7 +130,7 @@ class TestCase {
         case 0: {
           // add an event
           const initiator = Math.floor(Math.random() * nrParticipants);
-          generated.splice(Math.floor(Math.random() * generated.length), 0, [initiator, taskID]);
+          generated.splice(Math.floor(Math.random() * generated.length), 0, [initiator, taskID, 0]);
           break;
         }
         case 1: {

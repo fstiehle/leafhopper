@@ -8,8 +8,16 @@ export default class caseController {
       const caseID = req.params.case;
       console.log('case get request for case', caseID);
 
+      const confirmation = process.steps[process.index];
+      if (confirmation == null) {
+        console.error("Index", process.index, "but steps", process.steps)
+        res.sendStatus(500);
+        return next();
+      }
+
+      console.log('returning index', process.index, 'with state', confirmation.newTokenState);
       res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify({message: process.steps[process.index]}));
+      res.status(200).send(JSON.stringify({message: confirmation}));
       return next();
     }
   }

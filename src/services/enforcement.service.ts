@@ -15,8 +15,6 @@ export default class Enforcement {
       return false;
     }
     const step = proposal.step;
-    console.log(step)
-    console.log(process)
     if (step.caseID !== process.caseID) {
       return false;
     }
