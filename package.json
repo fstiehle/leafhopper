@@ -15,7 +15,8 @@
     "serve": "nodemon src/app.ts",
     "test": "mocha",
     "clean": "rimraf dist",
-    "case/0": "ts-node tests/cases/incident-management/scripts/case.ts"
+    "case/0": "ts-node tests/cases/incident-management/case.ts",
+    "case/1": "ts-node tests/cases/supply-chain/case.ts"
   },
   "repository": {
     "type": "git",
@@ -42,7 +43,7 @@
     "@typescript-eslint/parser": "^5.50.0",
     "chai": "^4.3.6",
     "chai-http": "^4.3.0",
-    "chorpiler": "^0.6.4",
+    "chorpiler": "^0.7.5",
     "eslint": "^8.18.0",
     "ethereum-waffle": "^4.0.9",
     "ganache": "^7.7.5",

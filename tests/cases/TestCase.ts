@@ -24,8 +24,8 @@ const sleep = (ms: number) => {
 
 class TestCase {
 
-  static redeploy(): [n: number, s: string]{
-    const res = execute( `npm run deploy` )!;
+  static redeploy(baseline = false): [cost: number, address: string] {
+    const res = baseline? execute( `npm run deploy ./dist/contracts/ProcessEnactment.json b` )! : execute( `npm run deploy` )!
     const address = res
     .substring(
       res.indexOf("[") + 1, 
@@ -172,8 +172,8 @@ class TestCase {
 
   static copyConfigFiles(dir: string, CONFIG_FOLDER: string) {
     for (const file of ['participants.config.ts', 'leafhopper.config.ts', 'deployment.config.ts', 'model/case.bpmn'])
-      execute( `npx ncp ${path.join(dir, "../config/", file)} ${path.join(CONFIG_FOLDER, file)}` );
-    execute( `npx ncp ${path.join(dir, "../config/docker-compose.yml")} ${path.join("./docker-compose.yml")}` );
+      execute( `npx ncp ${path.join(dir, "./config/", file)} ${path.join(CONFIG_FOLDER, file)}` );
+    execute( `npx ncp ${path.join(dir, "./config/docker-compose.yml")} ${path.join("./docker-compose.yml")}` );
   }
 
   static cleanUpConfigFiles(CONFIG_FOLDER: string) {

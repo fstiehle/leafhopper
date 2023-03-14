@@ -18,10 +18,10 @@ export default class Wallet implements IWallet {
       this.attach(contractAddress);
   }
 
-  async attach(address: string) {
+  async attach(address: string, abiPath = './dist/contracts/ProcessChannel.json') {
     let contractData;
     try {
-      contractData = JSON.parse(fs.readFileSync('./dist/contracts/ProcessChannel.json').toString());
+      contractData = JSON.parse(fs.readFileSync(abiPath).toString());
     } catch (error) {
       console.warn("Error loading contract abi, did you run 'npm run build'?");
       console.warn(error);
@@ -53,6 +53,17 @@ export default class Wallet implements IWallet {
   async submit(proof: IProof) {
     if (this.contract == null) return null;
     return await this.contract.submit(proof);
+  }
+
+  async index(): Promise<number> {
+    if (this.contract == null) return 0;
+    try {
+      const index = await this.contract.index();
+      return Number.parseInt(index);
+    } catch (error) {
+      console.log(error);
+      return 0;
+    }
   }
 
   produceSignature(toSign: ISignable): Promise<string> {

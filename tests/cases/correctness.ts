@@ -56,7 +56,7 @@ const runCorrectnessCheck = (async (options: {
     console.log("Composing up docker...");
     execute( `docker compose up -d` );
 
-    const conformingTraces: number[][][] = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString()).conforming;
+    const conformingTraces: number[][][] = JSON.parse(fs.readFileSync(path.join(options.caseDir, './traces/traces.json')).toString()).conforming;
 
     let traces: number[][][];
     if (options.traces.toGenerate > 0) {
@@ -68,13 +68,13 @@ const runCorrectnessCheck = (async (options: {
         options.traces.nrTasks, 
         options.traces.toGenerate);
 
-      fs.writeFile(path.join(options.caseDir, '../traces/generated.json'), JSON.stringify(traces), { flag: 'w+' },
+      fs.writeFile(path.join(options.caseDir, './traces/generated.json'), JSON.stringify(traces), { flag: 'w+' },
           (err) => { if (err) { console.error(err); } });
           console.log("Contract address written to dist/config/leafhopper.config.js");
 
     } else {
       // read existing traces
-      traces = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/generated.json')).toString());
+      traces = JSON.parse(fs.readFileSync(path.join(options.caseDir, './traces/generated.json')).toString());
     }
 
      // wait for node to be ready

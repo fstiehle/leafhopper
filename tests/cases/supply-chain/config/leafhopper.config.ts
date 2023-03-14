@@ -1,5 +1,5 @@
 export default {
-  CASE: "Incident Management",
+  CASE: "Supply Chain",
   ROOT: {
     chain: "http://host.docker.internal:8545",
     contract: "{{{contractAddress}}}" // this is replaced by the deploy script

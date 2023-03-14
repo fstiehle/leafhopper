@@ -4,18 +4,21 @@ import { execute, TestCase } from "./TestCase";
 import Wallet from '../../src/classes/Wallet';
 import config from '../../src/config/deployment.config';
 import { ethers, JsonRpcProvider } from "ethers";
-import { assert } from "console";
 import ConfirmMessage from "../../src/classes/ConfirmMessage";
 import IProof from "../../src/interfaces/IProof";
 
-const logCost = (cost: Map<string, number>) => {
-  cost.set("Total", [...cost.values()].reduce((p, e) => { return e + p }));
+const logCost = (cost: Map<string, number>, title: string) => {
+  console.log(title);
+  const deployment = cost.get("Deployment"); cost.delete("Deployment");
+  cost.set("Total (without Deployment)", [...cost.values()].reduce((p, e) => { return e + p }));
+  cost.set("Deployment", deployment ? deployment : 0);
+  cost.set("Total", cost.get("Total (without Deployment)")! + (deployment ? deployment : 0));
   // from: https://stackoverflow.com/a/2901298
   console.table(Array.from(cost).map(([key, value]) => [key.padStart(28), value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",").padStart(9)]));
 }
 
 const benchmarkCase = async (
-  state: IProof, 
+  states: IProof[], 
   provider: JsonRpcProvider, 
   participants: Wallet[],
   traces: number[][]) => {
@@ -25,15 +28,17 @@ const benchmarkCase = async (
   }
 
   const gasCost = new Map<string, number>();
-  const tx = await participants[0].submit(state);
-  let total = Number.parseInt((await tx.wait(1)).gasUsed);
-  gasCost.set("State Submission", total);
-  if (await participants[0].isDisputed() !== true) {
-    throw new Error("Contract dispute was not succeesful");
+  for (const state of states) {
+    const tx = await participants[0].submit(state);
+    const cost = Number.parseInt((await tx.wait(1)).gasUsed);
+    gasCost.set("State Submission " + state.index, cost);
+    if (await participants[0].index() !== state.index) {
+      throw new Error("Contract submit was not succeesful");
+    }
   }
 
   // mine a block so we move forward in time and elapse our dispute window
-  await provider.send("evm_increaseTime", [1]);
+  await provider.send("evm_increaseTime", [10]);
   await provider.send("evm_mine", []);
 
   // continue on the blockchain
@@ -41,16 +46,16 @@ const benchmarkCase = async (
   for (const task of traces) {
     const parID = task[0];
     const taskID = task[1];
+    const cond = task[2];
     console.log("\nReplay task", taskID);
     // replay task to blockchain
     const wall = participants[parID];
     if (wall.contract == null) {
       throw Error("Partcipant " + parID + " Failed to connect to contract");
     }
-    const tx = await wall.contract.continueAfterDispute(taskID);
+    const tx = await wall.contract.continueAfterDispute(taskID, cond);
     const cost = Number.parseInt((await tx.wait(1)).gasUsed);
     gasCost.set("Enact task " + taskID, cost);
-    total += cost;
   }
 
   const end = await participants[0].contract!.tokenState();
@@ -60,7 +65,6 @@ const benchmarkCase = async (
     console.log("OK! End event reached");
   }
 
-  gasCost.set("Total (Excluding Deployment)", total);
   return gasCost;
 }
 
@@ -69,10 +73,10 @@ const runGasCost = (async (options: {
   caseDir: string, 
   mnemonic: string, 
   skeys: string[],
-  traces: {
-    middleEvent: number
-  }
-  }) => {
+  steps: {
+    averageCase: {newTokenState: number}[],
+    worstCase: {newTokenState: number}[][]
+  }}) => {
 
   let ganacheInstance: string|null = null;
 
@@ -86,10 +90,10 @@ const runGasCost = (async (options: {
   // generate 
   try {
     // generate
-    execute( `npm run generate ${path.join("./src/config/model/case.bpmn")}` );
+    execute( `npm run generate ${path.join("./src/config/model/case.bpmn")} baseline` );
 
     // load traces
-    const traces: any = JSON.parse(fs.readFileSync(path.join(options.caseDir, '../traces/traces.json')).toString());
+    const traces: any = JSON.parse(fs.readFileSync(path.join(options.caseDir, './traces/traces.json')).toString());
 
     // start ganche
     console.log("Booting up ganache...");
@@ -100,79 +104,118 @@ const runGasCost = (async (options: {
       console.log(error);
     }
 
-    // deploy contract
-    let [dCost, address] = TestCase.redeploy();
-
     const provider = new ethers.JsonRpcProvider(config.ROOT.chain);
     // prepare wallets
     const participants = new Array<Wallet>();
     options.skeys.forEach((key, i) => {
-      participants.push(new Wallet(i, new ethers.Wallet(key, provider), address))
+      participants.push(new Wallet(i, new ethers.Wallet(key, provider), ""))
     });
 
-    assert(await participants[0].isDisputed() === false, "Error: Contract is initially disputed!");
+    // ------------------------------
+    // Baseline: Benchmark Baseline
+    console.log("\nBenchmark baseline");
+    for (const [traceID, trace] of traces.conforming.entries()) {
+      const gasCost = new Map<string, number>();
+      const [dCost, address] = TestCase.redeploy(true);
+      gasCost.set("Deployment", dCost);
+      participants.forEach(async (w) => {
+        await w.attach(address, './dist/contracts/ProcessEnactment.json');
+      });
 
-    let state: IProof;
-    // best case: only submit final state
-    console.log("\nBenchmark best case scenario: only submit final state");
-    const final = new ConfirmMessage();
-    final.step.newTokenState = 0;
-    final.step.index = 1;
-    for (let index = 0; index < participants.length; index++) {
-      final.signatures.push(await participants[index].produceSignature(final.step));
+      for (const task of trace) {
+        const parID = task[0];
+        const taskID = task[1];
+        const cond = task[2];
+        // replay task
+        console.log('\nReplay initiator', parID, 'trying to enact task', taskID, 'with cond', cond);
+        const tx = await (await participants[parID].contract!.enact(taskID, cond)).wait(1);
+        const cost = Number.parseInt(tx.gasUsed)
+        gasCost.set(`enact task ${taskID}`, cost);
+      }
+      logCost(gasCost, "Baseline Case Trace " + traceID);
     }
-    state = final.getProof();
-    let caseCost = await benchmarkCase(
-      state, 
-      provider,
-      participants,
-       []);
 
-    caseCost.set("Deployment", dCost);
-    logCost(caseCost);
+    for (const [traceID, trace] of traces.conforming.entries()) {
+      console.log("Replay Trace", traceID);
 
-    // re-deploy contract
-    [dCost, address] = TestCase.redeploy();
-    participants.forEach(async (w) => {
-      await w.attach(address);
-    });
+      let [dCost, address] = TestCase.redeploy();
+      participants.forEach(async (w) => {
+        await w.attach(address);
+      });
 
-    // average case: dispute with state after half of the process
-    console.log("\nBenchmark average case scenario: dispute after half of the process");
-    const half = new ConfirmMessage();
-    half.step.newTokenState = options.traces.middleEvent;
-    half.step.index = 1;
-    for (let index = 0; index < participants.length; index++) {
-      half.signatures.push(await participants[index].produceSignature(final.step));
+      // ------------------------------
+      // Best Case: only submit final state
+      console.log("\nBenchmark best case scenario: only submit final state");
+      const final = new ConfirmMessage();
+      final.step.newTokenState = 0;
+      final.step.index = 1;
+      for (let index = 0; index < participants.length; index++) {
+        final.signatures.push(await participants[index].produceSignature(final.step));
+      }
+      let caseCost = await benchmarkCase(
+        [final.getProof()], 
+        provider,
+        participants,
+        []);
+
+      caseCost.set("Deployment", dCost);
+      logCost(caseCost, "Best Case Trace " + traceID);
+
+      // re-deploy contract
+      [dCost, address] = TestCase.redeploy();
+      participants.forEach(async (w) => {
+        await w.attach(address);
+      });
+
+      // ------------------------------
+      // Average Case: dispute with state after half of the process
+      console.log("\nBenchmark average case scenario: dispute after half of the process");
+      
+      const proof = new ConfirmMessage();
+      proof.step.newTokenState = options.steps.averageCase[traceID].newTokenState;
+      proof.step.index = 1;
+      for (let index = 0; index < participants.length; index++)
+        proof.signatures.push(await participants[index].produceSignature(proof.step));
+
+      caseCost = await benchmarkCase(
+        [proof.getProof()], 
+        provider, 
+        participants,
+        trace.slice(Math.ceil(trace.length / 2), trace.length));
+
+      caseCost.set("Deployment", dCost);
+      logCost(caseCost, "Avg. Case Trace " + traceID);
+
+      // re-deploy contract
+      console.log("\nRe-deploy and re-attach contract...");
+      [dCost, address] = TestCase.redeploy();
+      participants.forEach(async (w) => {
+        await w.attach(address);
+      });
+
+      // ------------------------------
+      // Worst Case: dispute after first task of process with stale state
+      console.log("\nBenchmark worst case scenario: submission of stale state");
+      const proofs = new Array<IProof>();
+      for (const [j, step] of options.steps.worstCase[traceID].entries()) {
+        const proof = new ConfirmMessage();
+        proof.step.newTokenState = step.newTokenState;
+        proof.step.index = j + 1;
+        for (let index = 0; index < participants.length; index++)
+          proof.signatures.push(await participants[index].produceSignature(proof.step));
+
+        proofs.push(proof.getProof());
+      }
+
+      caseCost = await benchmarkCase(
+        proofs, 
+        provider, 
+        participants, 
+        trace.slice(2, trace.length));
+
+      caseCost.set("Deployment", dCost);
+      logCost(caseCost, "Worst Case Trace " + traceID);
     }
-    state = final.getProof();
-    const avgTrace = traces.conforming[traces.indexMediumCase];
-    caseCost = await benchmarkCase(
-      state, 
-      provider, 
-      participants,
-      avgTrace.slice(Math.ceil(avgTrace.length / 2), avgTrace.length));
-
-    caseCost.set("Deployment", dCost);
-    logCost(caseCost);
-
-    // re-deploy contract
-    console.log("\nRe-deploy and re-attach contract...");
-    [dCost, address] = TestCase.redeploy();
-    participants.forEach(async (w) => {
-      await w.attach(address);
-    });
-
-    // Worst Case: dispute at start of process
-    console.log("\nBenchmark worst case scenario: stuck in start event");
-    state = new ConfirmMessage().getProof();
-    caseCost = await benchmarkCase(state, 
-      provider, 
-      participants, 
-      traces.conforming[traces.indexWorstCase]);
-
-    caseCost.set("Deployment", dCost);
-    logCost(caseCost);
 
     console.log("\nAll done!");
 
