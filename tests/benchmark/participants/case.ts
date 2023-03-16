@@ -4,6 +4,7 @@ import {deployContract, MockProvider, solidity} from 'ethereum-waffle';
 import { Contract } from "ethers";
 import fs from 'fs';
 import Proof from "./Proof";
+import path from 'path';
 use(solidity);
 
 (async () => {
@@ -84,6 +85,7 @@ use(solidity);
     }
 
     console.table(allCost);
+
     console.log("\nAll Done! 😍");
     
   } catch (error) {

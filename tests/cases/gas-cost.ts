@@ -174,7 +174,7 @@ const runGasCost = (async (options: {
       // ------------------------------
       // Average Case: dispute with state after half of the process
       console.log("\nBenchmark average case scenario: dispute after half of the process");
-      
+
       const proof = new ConfirmMessage();
       proof.step.newTokenState = options.steps.averageCase[traceID].newTokenState;
       proof.step.index = 1;
@@ -188,7 +188,7 @@ const runGasCost = (async (options: {
         trace.slice(Math.ceil(trace.length / 2), trace.length));
 
       caseCost = new Map([...Array.from(stateCost.entries()), ...Array.from(taskCost.entries())]);
-      completeCost.leafhopper.medium.push([...caseCost.values()][0]);
+      completeCost.leafhopper.medium.push(calculateExecCost([...caseCost.values()]));
       caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
       caseCost.set("Deployment", dCost);
       logCost(caseCost, "Medium Case Trace " + traceID);
@@ -220,7 +220,7 @@ const runGasCost = (async (options: {
         provider, 
         participants, 
         trace.slice(2, trace.length));
-  
+
       caseCost = new Map([...Array.from(stateCost.entries()), ...Array.from(taskCost.entries())]);
       completeCost.leafhopper.worst.push(calculateExecCost([...caseCost.values()]));
       caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
