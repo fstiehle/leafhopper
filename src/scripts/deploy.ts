@@ -15,9 +15,8 @@ if (args.length > 0) {
 
 (async () => {
 
-  const wallet = ethers.Wallet.fromPhrase(
-    config.IDENTITY.mnemonic,
-    new ethers.JsonRpcProvider(config.ROOT.chain));
+  const wallet = ethers.Wallet.fromMnemonic(
+    config.IDENTITY.mnemonic).connect(new ethers.providers.JsonRpcProvider(config.ROOT.chain));
 
   const metadata = JSON.parse(fs.readFileSync(filePath).toString());
 
@@ -27,11 +26,11 @@ if (args.length > 0) {
   // Deploy the contract
   const factory = ethers.ContractFactory.fromSolidity(metadata, wallet);
   const contract = baseline ? await factory.deploy(keys) : await factory.deploy(keys, config.ROOT.disputeWindow);
-  const address = await contract.getAddress();
+  const address = contract.address;
   console.log(`Deployment of ${filePath} successful! Contract address:`);
   console.log(`[${address}]`);
 
-  const tx = contract.deploymentTransaction();
+  const tx = contract.deployTransaction;
   if (tx == null) {
     return console.error("Error getting deployment tx.");
   } 

@@ -22,6 +22,6 @@ console.log("Starting participant", id, "for case", config.CASE);
 AppServer.listen(
   port, 
   id, 
-  new ethers.Wallet(skey, new ethers.JsonRpcProvider(config.ROOT.chain)),
+  new ethers.Wallet(skey, new ethers.providers.JsonRpcProvider(config.ROOT.chain)),
   config.ROOT.contract,
   participantsConfig);

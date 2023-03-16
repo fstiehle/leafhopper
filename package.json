@@ -1,6 +1,6 @@
 {
   "name": "leafhopper",
-  "version": "0.0.1",
+  "version": "0.2",
   "description": "",
   "main": "dist/app.js",
   "baseUrl": ".",
@@ -14,7 +14,8 @@
     "postgenerate": "rimraf dist && tsc && waffle",
     "serve": "nodemon src/app.ts",
     "test": "mocha",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist && rimraf src/config/generated/*",
+    "benchmark": "ts-node tests/benchmark/participants/case.ts",
     "case/0": "ts-node tests/cases/incident-management/case.ts",
     "case/1": "ts-node tests/cases/supply-chain/case.ts"
   },
@@ -29,8 +30,8 @@
   },
   "homepage": "https://github.com/fstiehle/leafhopper#readme",
   "dependencies": {
-    "ethers": "^6.0.5",
-    "express": "^4.18.1"
+    "express": "^4.18.1",
+    "ethereum-waffle": "^4.0.10"
   },
   "devDependencies": {
     "@ganache/console.log": "^0.3.0",
@@ -43,9 +44,8 @@
     "@typescript-eslint/parser": "^5.50.0",
     "chai": "^4.3.6",
     "chai-http": "^4.3.0",
-    "chorpiler": "^0.7.5",
+    "chorpiler": "^0.8.0",
     "eslint": "^8.18.0",
-    "ethereum-waffle": "^4.0.9",
     "ganache": "^7.7.5",
     "mocha": "^10.0.0",
     "ncp": "^2.0.0",

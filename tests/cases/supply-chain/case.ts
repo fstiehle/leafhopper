@@ -2,9 +2,9 @@ import participants from "./config/participants.config";
 import runCorrectnessCheck from "../correctness";
 import runGasCost from "../gas-cost";
 
-const CONFIG_FOLDER = __dirname + "../../../../../src/config";
+const CONFIG_FOLDER = __dirname + "../../../../src/config";
 const TEST_MNEMONIC = "decline fantasy twist absent spike life shoe split that brush dutch record"
-const TO_GENERATE = 60;
+const TO_GENERATE = 0;
 
 let arg: null|string = null;
 const args = process.argv.slice(2);
@@ -42,10 +42,15 @@ if (arg === 'correctness') {
       "0xddc88739eccb6ad788d1ab2fe5dbe3a4b07b12669a8a57ad074767468e5f8772",
       "0xa3a84c5f2b96ae31e3334f8a67e11d23d21ac18432404d5c6cba58f6eccdbfa3"
     ],
-    traces: {
-      middleEvent: 128,
-      secondEvent: 2,
-      thirdEvent: 4
+    steps: {
+      worstCase: [
+        [{newTokenState: 2}, {newTokenState: 12}],
+        [{newTokenState: 2}, {newTokenState: 12}]
+      ],
+      averageCase: [
+        {newTokenState: 128},
+        {newTokenState: 128}
+      ]
     }
   });
 }

@@ -46,8 +46,12 @@ const runCorrectnessCheck = (async (options: {
     try {
       ganacheInstance = execute( `npx ganache -m "${options.mnemonic}" -D` );
     } catch (error) {
-      //  ganache may be already running, so we don't need this to succeed
-      console.log(error);
+      if (error instanceof Error && error.message.includes("EADDRINUSE")) {
+        // ganache may be already running, so we don't need this to succeed
+        console.warn("Ganache may be already running, trying to proceed...");
+      } else {
+        throw error;
+      }
     }
 
     execute( `npm run deploy` );
@@ -205,10 +209,11 @@ const runCorrectnessCheck = (async (options: {
     }
 
     console.log("Stopping and cleaning up docker...");
+    const docker = execute( `docker compose images -q` );
     execute( `docker compose down` );
-    execute( `docker compose rm -f` );
-    execute( `docker rmi $(docker compose images -q)` );
-
+    execute( `docker compose rm` );
+    docker?.split("\n").forEach((image) => {if (image) execute( `docker rmi ${image}` )});
+    
     // restore
     console.log("Restore and clean up...");
     TestCase.restoreConfigFolder(options.configFolder);

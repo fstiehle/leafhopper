@@ -68,10 +68,10 @@ export default class Wallet implements IWallet {
 
   produceSignature(toSign: ISignable): Promise<string> {
     const signablePart = toSign.getSignable();
-    const encoder = new ethers.AbiCoder();
+    const encoder = new ethers.utils.AbiCoder();
     return this._wallet.signMessage(
-      ethers.toBeArray(
-        ethers.keccak256(
+      ethers.utils.arrayify(
+        ethers.utils.keccak256(
           encoder.encode(signablePart.types, signablePart.value)
         )
       )
@@ -80,10 +80,10 @@ export default class Wallet implements IWallet {
 
   verify(_toVerify: ISignable, signature: string): string {
     const toVerify = _toVerify.getSignable();
-    const encoder = new ethers.AbiCoder;
-    return ethers.verifyMessage(
-      ethers.toBeArray(
-        ethers.keccak256(
+    const encoder = new ethers.utils.AbiCoder;
+    return ethers.utils.verifyMessage(
+      ethers.utils.arrayify(
+        ethers.utils.keccak256(
           encoder.encode(toVerify.types, toVerify.value)
         )
       ),

@@ -27,9 +27,9 @@ fs.readFile(filePath,
     pcGenerator.compile(iNet)
     .then((gen) => {
       console.log(gen.encoding);
-      fs.writeFile(path.join(__dirname, "..", "config/generated/StateChannel.sol"), gen.target, { flag: 'w+' },
+      fs.writeFile(path.join(__dirname, "..", "config/generated/ProcessChannel.sol"), gen.target, { flag: 'w+' },
       (err) => { if (err) { console.error(err); } });
-      console.log("StateChannel.sol generated.");
+      console.log("ProcessChannel.sol generated.");
     })
     .catch(err => console.error(err));
 

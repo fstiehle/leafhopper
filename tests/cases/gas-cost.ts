@@ -3,23 +3,26 @@ import fs from 'fs';
 import { execute, TestCase } from "./TestCase";
 import Wallet from '../../src/classes/Wallet';
 import config from '../../src/config/deployment.config';
-import { ethers, JsonRpcProvider } from "ethers";
+import { ethers } from "ethers";
 import ConfirmMessage from "../../src/classes/ConfirmMessage";
 import IProof from "../../src/interfaces/IProof";
 
+const calculateExecCost = (cost: number[]) => {
+ return cost.reduce((p, e) => { return e + p });
+}
+
+const calculateAvgCost = (cost: number[]) => {
+  return cost.reduce((p, e) => { return e + p }) / cost.length;
+ }
+
 const logCost = (cost: Map<string, number>, title: string) => {
   console.log(title);
-  const deployment = cost.get("Deployment"); cost.delete("Deployment");
-  cost.set("Total (without Deployment)", [...cost.values()].reduce((p, e) => { return e + p }));
-  cost.set("Deployment", deployment ? deployment : 0);
-  cost.set("Total", cost.get("Total (without Deployment)")! + (deployment ? deployment : 0));
-  // from: https://stackoverflow.com/a/2901298
   console.table(Array.from(cost).map(([key, value]) => [key.padStart(28), value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",").padStart(9)]));
 }
 
 const benchmarkCase = async (
   states: IProof[], 
-  provider: JsonRpcProvider, 
+  provider: ethers.providers.JsonRpcProvider, 
   participants: Wallet[],
   traces: number[][]) => {
 
@@ -27,11 +30,12 @@ const benchmarkCase = async (
     throw new Error("Contract already disputed!");
   }
 
-  const gasCost = new Map<string, number>();
+  const stateCost = new Map<string, number>();
+  const taskCost = new Map<string, number>();
   for (const state of states) {
     const tx = await participants[0].submit(state);
     const cost = Number.parseInt((await tx.wait(1)).gasUsed);
-    gasCost.set("State Submission " + state.index, cost);
+    stateCost.set("State Submission " + state.index, cost);
     if (await participants[0].index() !== state.index) {
       throw new Error("Contract submit was not succeesful");
     }
@@ -55,7 +59,7 @@ const benchmarkCase = async (
     }
     const tx = await wall.contract.continueAfterDispute(taskID, cond);
     const cost = Number.parseInt((await tx.wait(1)).gasUsed);
-    gasCost.set("Enact task " + taskID, cost);
+    taskCost.set("Enact task " + taskID, cost);
   }
 
   const end = await participants[0].contract!.tokenState();
@@ -65,7 +69,7 @@ const benchmarkCase = async (
     console.log("OK! End event reached");
   }
 
-  return gasCost;
+  return [stateCost, taskCost];
 }
 
 const runGasCost = (async (options: {
@@ -100,49 +104,46 @@ const runGasCost = (async (options: {
     try {
       ganacheInstance = execute( `npx ganache -m "${options.mnemonic}" -D` );
     } catch (error) {
-      //  ganache may be already running, so we don't need this to succeed
-      console.log(error);
+      if (error instanceof Error && error.message.includes("EADDRINUSE")) {
+        // ganache may be already running, so we don't need this to succeed
+        console.warn("Ganache may be already running, trying to proceed...");
+      } else {
+        throw error;
+      }
     }
 
-    const provider = new ethers.JsonRpcProvider(config.ROOT.chain);
+    const provider = new ethers.providers.JsonRpcProvider(config.ROOT.chain);
     // prepare wallets
     const participants = new Array<Wallet>();
     options.skeys.forEach((key, i) => {
       participants.push(new Wallet(i, new ethers.Wallet(key, provider), ""))
     });
 
-    // ------------------------------
-    // Baseline: Benchmark Baseline
-    console.log("\nBenchmark baseline");
-    for (const [traceID, trace] of traces.conforming.entries()) {
-      const gasCost = new Map<string, number>();
-      const [dCost, address] = TestCase.redeploy(true);
-      gasCost.set("Deployment", dCost);
-      participants.forEach(async (w) => {
-        await w.attach(address, './dist/contracts/ProcessEnactment.json');
-      });
-
-      for (const task of trace) {
-        const parID = task[0];
-        const taskID = task[1];
-        const cond = task[2];
-        // replay task
-        console.log('\nReplay initiator', parID, 'trying to enact task', taskID, 'with cond', cond);
-        const tx = await (await participants[parID].contract!.enact(taskID, cond)).wait(1);
-        const cost = Number.parseInt(tx.gasUsed)
-        gasCost.set(`enact task ${taskID}`, cost);
+    // collect all costs
+    const completeCost = {
+      "baseline": {
+        "deploy": 0,
+        "exec": new Array<number>(),
+        "task": new Array<number>()
+      },
+      "leafhopper": {
+        "deploy": 0,
+        "best": new Array<number>(),
+        "medium": new Array<number>(),
+        "worst": new Array<number>(),
+        "task": new Array<number>()
       }
-      logCost(gasCost, "Baseline Case Trace " + traceID);
     }
 
     for (const [traceID, trace] of traces.conforming.entries()) {
       console.log("Replay Trace", traceID);
 
       let [dCost, address] = TestCase.redeploy();
+      completeCost.leafhopper.deploy = dCost;
       participants.forEach(async (w) => {
         await w.attach(address);
       });
-
+      
       // ------------------------------
       // Best Case: only submit final state
       console.log("\nBenchmark best case scenario: only submit final state");
@@ -152,14 +153,17 @@ const runGasCost = (async (options: {
       for (let index = 0; index < participants.length; index++) {
         final.signatures.push(await participants[index].produceSignature(final.step));
       }
-      let caseCost = await benchmarkCase(
+      let [stateCost, taskCost] = await benchmarkCase(
         [final.getProof()], 
         provider,
         participants,
         []);
 
+      let caseCost = new Map([...Array.from(stateCost.entries()), ...Array.from(taskCost.entries())]);
+      caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
       caseCost.set("Deployment", dCost);
       logCost(caseCost, "Best Case Trace " + traceID);
+      completeCost.leafhopper.best.push([...stateCost.values()][0]);
 
       // re-deploy contract
       [dCost, address] = TestCase.redeploy();
@@ -177,14 +181,18 @@ const runGasCost = (async (options: {
       for (let index = 0; index < participants.length; index++)
         proof.signatures.push(await participants[index].produceSignature(proof.step));
 
-      caseCost = await benchmarkCase(
+      [stateCost, taskCost] = await benchmarkCase(
         [proof.getProof()], 
         provider, 
         participants,
         trace.slice(Math.ceil(trace.length / 2), trace.length));
 
+      caseCost = new Map([...Array.from(stateCost.entries()), ...Array.from(taskCost.entries())]);
+      completeCost.leafhopper.medium.push([...caseCost.values()][0]);
+      caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
       caseCost.set("Deployment", dCost);
-      logCost(caseCost, "Avg. Case Trace " + traceID);
+      logCost(caseCost, "Medium Case Trace " + traceID);
+      completeCost.leafhopper.task = completeCost.leafhopper.task.concat([...taskCost.values()]);
 
       // re-deploy contract
       console.log("\nRe-deploy and re-attach contract...");
@@ -207,16 +215,61 @@ const runGasCost = (async (options: {
         proofs.push(proof.getProof());
       }
 
-      caseCost = await benchmarkCase(
+      [stateCost, taskCost] = await benchmarkCase(
         proofs, 
         provider, 
         participants, 
         trace.slice(2, trace.length));
-
+  
+      caseCost = new Map([...Array.from(stateCost.entries()), ...Array.from(taskCost.entries())]);
+      completeCost.leafhopper.worst.push(calculateExecCost([...caseCost.values()]));
+      caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
       caseCost.set("Deployment", dCost);
       logCost(caseCost, "Worst Case Trace " + traceID);
+      completeCost.leafhopper.task = completeCost.leafhopper.task.concat([...taskCost.values()]);
     }
 
+    // ------------------------------
+    // Baseline: Benchmark Baseline
+    console.log("\nBenchmark baseline");
+    for (const [traceID, trace] of traces.conforming.entries()) {
+      const caseCost = new Map<string, number>();
+      const [dCost, address] = TestCase.redeploy(true);
+      completeCost.baseline.deploy = dCost;
+      participants.forEach(async (w) => {
+        await w.attach(address, './dist/contracts/ProcessEnactment.json');
+      });
+
+      for (const task of trace) {
+        const parID = task[0];
+        const taskID = task[1];
+        const cond = task[2];
+        // replay task
+        console.log('\nReplay initiator', parID, 'trying to enact task', taskID, 'with cond', cond);
+        const tx = await (await participants[parID].contract!.enact(taskID, cond)).wait(1);
+        const cost = Number.parseInt(tx.gasUsed)
+        caseCost.set(`enact task ${taskID}`, cost);
+      }
+      completeCost.baseline.exec.push(calculateExecCost([...caseCost.values()]));
+      completeCost.baseline.task = completeCost.baseline.task.concat([...caseCost.values()]);
+      caseCost.set("Total (without Deployment)", calculateExecCost([...caseCost.values()]));
+      caseCost.set("Deployment", dCost);
+      logCost(caseCost, "Baseline Case Trace " + traceID);
+    }
+
+    console.log("Total Case Cost");
+    console.table({"baseline": {
+      "deploy": completeCost.baseline.deploy,
+      "exec": calculateAvgCost(completeCost.baseline.exec),
+      "task": calculateAvgCost(completeCost.baseline.task)
+    }});
+    console.table({"leafhopper": {
+      "deploy": completeCost.leafhopper.deploy,
+      "best": calculateAvgCost(completeCost.leafhopper.best),
+      "medium": calculateAvgCost(completeCost.leafhopper.medium),
+      "worst": calculateAvgCost(completeCost.leafhopper.worst),
+      "task": calculateAvgCost(completeCost.leafhopper.task)
+    }});
     console.log("\nAll done!");
 
   } catch(err) {
