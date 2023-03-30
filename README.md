@@ -64,9 +64,11 @@ Participants identities must be configured accordingly in `src/configruation/par
 
 ## Run Scripts
 
-- "build": Build the project and compile the contract. Requires a generate run before.
-- "chain": simulates Ethereum through ganache.
-- "generate": generates the enactment components from the config folder.
-- "deploy": deploys the channel contract to the in `src/configruation/deployment.config.ts` configured blockchain environment
-- "case/0": Run the incident management case study either with 'correctness' or 'gas'.
-- "case/1": Run the supply chain case study either with 'correctness' or 'gas'.
+`npm run ...`
+
+- `build`: Build the project and compile the contract. Requires a generate run before.
+- `chain`: simulates Ethereum through ganache.
+- `generate`: generates the enactment components from the config folder.
+- `deploy`: deploys the channel contract to the in `src/configruation/deployment.config.ts` configured blockchain environment
+- `case/0`: Run the incident management case study either with 'correctness' or 'gas'.
+- `case/1`: Run the supply chain case study either with 'correctness' or 'gas'.
