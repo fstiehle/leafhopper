@@ -38,7 +38,7 @@ and `npm run case/1 correctness` for the supply chain case in the project direct
 All conforming traces accepted! 
 All non-conforming traces caught!
 ```
-> If you force close out of the script, make sure to stop and delete the deployed docker containers and delete their images before starting another run. If the script runs through it will clean up by itself.
+> If you force close out of the script, make sure to stop deployed docker containers and delete their images before starting another run. If the script runs through it will clean up by itself.
 
 
 To replicate the gas cost benchmark run `npm run case/0 gas` for the incident management case 
@@ -48,7 +48,7 @@ interim results. At the end of the script run a table labelled _Total Case Cost_
 
 # Usage For Different Cases
 
-:warning: This Section will be imporved in the future. Currently, Leafhopper is in prototype stage and not meant to be used for production systems.
+:warning: This Section will be imporved in the future. Currently, Leafhopper is in prototype stage and not meant for production systems.
 
 ## Install
 
