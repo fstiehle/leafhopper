@@ -38,6 +38,8 @@ and `npm run case/1 correctness` for the supply chain case in the project direct
 All conforming traces accepted! 
 All non-conforming traces caught!
 ```
+> If you force close out of the script, make sure to stop and delete the deployed docker containers and delete their images before starting another run. If the script runs through it will clean up by itself.
+
 
 To replicate the gas cost benchmark run `npm run case/0 gas` for the incident management case 
 and `npm run case/1 gas` for the supply chain case in the project directory. The console output will report on the outcome and also report on
