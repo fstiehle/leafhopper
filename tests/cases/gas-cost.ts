@@ -50,14 +50,22 @@ const benchmarkCase = async (
   for (const task of traces) {
     const parID = task[0];
     const taskID = task[1];
-    const cond = task[2];
-    console.log("\nReplay task", taskID);
+    let cond: number|null = null;
+    if (task.length > 2) {
+      cond = task[2];
+    }
+      
     // replay task to blockchain
     const wall = participants[parID];
     if (wall.contract == null) {
       throw Error("Partcipant " + parID + " Failed to connect to contract");
     }
-    const tx = await wall.contract.continueAfterDispute(taskID, cond);
+    let tx;
+    if (cond != null) {
+      tx = await wall.contract.continueAfterDispute(taskID, cond);
+    } else {
+      tx = await wall.contract.continueAfterDispute(taskID);
+    }
     const cost = Number.parseInt((await tx.wait(1)).gasUsed);
     taskCost.set("Enact task " + taskID, cost);
   }
@@ -243,10 +251,18 @@ const runGasCost = (async (options: {
       for (const task of trace) {
         const parID = task[0];
         const taskID = task[1];
-        const cond = task[2];
+        let cond: number|null = null;
+        if (task.length > 2) {
+          cond = task[2];
+        }
         // replay task
         console.log('\nReplay initiator', parID, 'trying to enact task', taskID, 'with cond', cond);
-        const tx = await (await participants[parID].contract!.enact(taskID, cond)).wait(1);
+        let tx;
+        if (cond != null) {
+          tx = await (await participants[parID].contract!.enact(taskID, cond)).wait(1);
+        } else {
+          tx = await (await participants[parID].contract!.enact(taskID)).wait(1);
+        }
         const cost = Number.parseInt(tx.gasUsed)
         caseCost.set(`enact task ${taskID}`, cost);
       }

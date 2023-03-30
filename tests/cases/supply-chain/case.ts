@@ -4,7 +4,7 @@ import runGasCost from "../gas-cost";
 
 const CONFIG_FOLDER = __dirname + "../../../../src/config";
 const TEST_MNEMONIC = "decline fantasy twist absent spike life shoe split that brush dutch record"
-const TO_GENERATE = 0;
+const TO_GENERATE = 0; // currently in the file: 2000
 
 let arg: null|string = null;
 const args = process.argv.slice(2);

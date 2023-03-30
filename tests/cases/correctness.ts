@@ -44,7 +44,7 @@ const runCorrectnessCheck = (async (options: {
     // deploy
     console.log("Booting up ganache...");
     try {
-      ganacheInstance = execute( `npx ganache -m "${options.mnemonic}" -D` );
+      ganacheInstance = execute( `npx ganache -m "${options.mnemonic}" -g 0 -D` );
     } catch (error) {
       if (error instanceof Error && error.message.includes("EADDRINUSE")) {
         // ganache may be already running, so we don't need this to succeed
@@ -140,15 +140,17 @@ const runCorrectnessCheck = (async (options: {
     for (const trace of traces) {      
 
       console.log("\nReplay non-conforming trace...");
+      let taskCaught = false;
       for (const task of trace) {
         const par = participants.get(task[0])!;
         const taskID = task[1];
-        const cond = task[2];
+        const cond = task[2];    
         // replay task
         console.log('\nReplay initiator', par.id, 'trying to enact task', taskID, 'with cond', cond);
          if (await TestCase.replayTask(par, cond, taskID)) {
           console.log("OK!")
         } else {
+          taskCaught = true;
           break;
         }
       }
@@ -159,11 +161,11 @@ const runCorrectnessCheck = (async (options: {
       if (!state.stable) {
         assert(false, Red + "Process in unstable state!" + Reset);
       } else {
-        if (state.endReached) {
+        if (state.endReached && !taskCaught) {
           assert(false, Red + "Non-conforming trace not caught!" + Reset);
         } else {
-          console.log(Green, "OK!", "Non-conforming trace caught", Reset);
           caught++;
+          console.log(Green, "OK!", "Non-conforming trace caught", `(${caught})`, Reset);
         }
       }
 

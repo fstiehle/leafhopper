@@ -90,7 +90,7 @@ contract ProcessChannel {
 
     uint _tokenState = tokenState;
 
-    do {
+    while(true) {
         if (msg.sender == participants[0] && 0 == id && (_tokenState & 1 == 1)) {
           _tokenState &= ~uint(1);
           _tokenState |= 2;
@@ -106,7 +106,8 @@ contract ProcessChannel {
           _tokenState |= 0;
           break;
         }
-    } while (false);
+      return;
+    }
 
     while(_tokenState != 0) {
       if ((cond & 1 == 1) && (_tokenState & 2 == 2)) {
