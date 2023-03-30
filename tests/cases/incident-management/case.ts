@@ -44,10 +44,10 @@ if (arg === 'correctness') {
     ],
     steps: {
       worstCase: [
-        [{newTokenState: 4}, {newTokenState: 0}],
-        [{newTokenState: 4}, {newTokenState: 16}],
-        [{newTokenState: 4}, {newTokenState: 16}],
-        [{newTokenState: 4}, {newTokenState: 16}]
+        [{newTokenState: 2}, {newTokenState: 8}],
+        [{newTokenState: 2}, {newTokenState: 4}],
+        [{newTokenState: 2}, {newTokenState: 4}],
+        [{newTokenState: 2}, {newTokenState: 4}]
       ],
       averageCase: [
         {newTokenState: 8},

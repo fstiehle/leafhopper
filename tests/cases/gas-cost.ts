@@ -54,12 +54,14 @@ const benchmarkCase = async (
     if (task.length > 2) {
       cond = task[2];
     }
-      
+
     // replay task to blockchain
     const wall = participants[parID];
     if (wall.contract == null) {
       throw Error("Partcipant " + parID + " Failed to connect to contract");
     }
+
+    console.log("Replay task", taskID, "from initiator", parID, "with cond", cond)
     let tx;
     if (cond != null) {
       tx = await wall.contract.continueAfterDispute(taskID, cond);
