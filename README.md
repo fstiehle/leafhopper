@@ -47,7 +47,7 @@ interim results. At the end of the script run a table labelled _Total Case Cost_
 
 # Usage For Different Cases
 
-This Section will be imporved in the future. Currently, Leafhopper is in prototype stage and not meant to be used for production systems.
+:warning: This Section will be imporved in the future. Currently, Leafhopper is in prototype stage and not meant to be used for production systems.
 
 ## Install
 
