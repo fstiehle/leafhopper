@@ -2,7 +2,7 @@
 
 Leafhopper is an implementation of the process channel approach: it transforms a BPMN choreography in a state channel network. 
 Leafhopper is the research prototype to the paper _Process Channels: A New Layer for Process
-Enactment Based on Blockchain State Channels_, submitteed to BPM 2023. See _Replicate the Evaluation_ below.
+Enactment Based on Blockchain State Channels_, submitteed to BPM 2023. See _Replicate the Case Studies_ below.
 
 # Structure
 
@@ -33,7 +33,7 @@ The project is built using node. For the correctness benchmark, additionally, Do
 3. In the project directory run `npm install`.
 
 To replicate the correctness benchmarks run make sure Docker is running and run `npm run case/0 correctness` for the incident management case 
-and `npm run case/1 correctness` for the supply chain case in the project directory. The console output will summarise the measured gas cost in a table and also report interim results (Part of the process can take a while, for example, booting up the docker compose network). In the end, the script must report 
+and `npm run case/1 correctness` for the supply chain case in the project directory. The console output will also report interim results (Part of the process can take a while, for example, booting up the docker compose network). In the end, the script must report 
 ```
 All conforming traces accepted! 
 All non-conforming traces caught!
@@ -42,9 +42,7 @@ All non-conforming traces caught!
 
 
 To replicate the gas cost benchmark run `npm run case/0 gas` for the incident management case 
-and `npm run case/1 gas` for the supply chain case in the project directory. The console output will report on the outcome and also report on
-interim results. At the end of the script run a table labelled _Total Case Cost_ is output to the console.
-
+and `npm run case/1 gas` for the supply chain case in the project directory. The console output will summarise the measured gas cost in a table and will also report on interim results. At the end of the run a table labelled _Total Case Cost_ is output to the console.
 
 # Usage For Different Cases
 
