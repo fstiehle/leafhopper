@@ -32,6 +32,8 @@ The project is built using node. For the correctness benchmark, additionally, Do
 2. Clone the repository.
 3. In the project directory run `npm install`.
 
+## Run
+
 To replicate the correctness benchmarks, make sure Docker is running and run `npm run case/0 correctness` for the incident management case 
 and `npm run case/1 correctness` for the supply chain case in the project directory. The console output will also report interim results (Part of the process can take a while, for example, booting up the docker compose network). In the end, the script must report 
 ```
